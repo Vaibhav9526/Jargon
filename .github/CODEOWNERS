@@ -1,0 +1,25 @@
+# Every pull request gets a review request automatically, so nothing sits waiting
+# for someone to notice it. Ownership here is about routing, not permission.
+#
+# Last match wins, so the specific rules below override the catch-all.
+
+* @jargon-app
+
+# Release, signing and CI plumbing. Breaking these breaks shipping for everyone.
+/.github/workflows/    @jargon-app
+/electron-builder.yml  @jargon-app
+/RELEASE.md            @jargon-app
+/RELEASE-CHECKLIST.md  @jargon-app
+
+# Licensing and attribution. Changes here have legal weight.
+/LICENSE                                  @jargon-app
+/LICENSE-ASSETS                           @jargon-app
+/src/renderer/src/assets/ATTRIBUTION.md    @jargon-app
+
+# Security and privacy surface.
+/SECURITY.md   @jargon-app
+/TELEMETRY.md  @jargon-app
+
+# Public credit for contributors. Adding a name here is a public claim about someone's work.
+/.github/contributors-extra.json  @jargon-app
+/CONTRIBUTORS.md                  @jargon-app

@@ -1,0 +1,521 @@
+{
+  "image": "school-props.png",
+  "tilewidth": 16,
+  "tileheight": 16,
+  "columns": 16,
+  "tilecount": 512,
+  "imagewidth": 256,
+  "imageheight": 512,
+  "props": {
+    "floor-a": {
+      "gid": 0,
+      "x": 0,
+      "y": 0,
+      "w": 1,
+      "h": 1
+    },
+    "floor-b": {
+      "gid": 1,
+      "x": 1,
+      "y": 0,
+      "w": 1,
+      "h": 1
+    },
+    "floor-study": {
+      "gid": 2,
+      "x": 2,
+      "y": 0,
+      "w": 1,
+      "h": 1
+    },
+    "floor-lounge": {
+      "gid": 3,
+      "x": 3,
+      "y": 0,
+      "w": 1,
+      "h": 1
+    },
+    "floor-office": {
+      "gid": 4,
+      "x": 4,
+      "y": 0,
+      "w": 1,
+      "h": 1
+    },
+    "floor-entry": {
+      "gid": 5,
+      "x": 5,
+      "y": 0,
+      "w": 1,
+      "h": 1
+    },
+    "wall": {
+      "gid": 6,
+      "x": 6,
+      "y": 0,
+      "w": 1,
+      "h": 2
+    },
+    "wall-side": {
+      "gid": 7,
+      "x": 7,
+      "y": 0,
+      "w": 1,
+      "h": 1
+    },
+    "partition": {
+      "gid": 8,
+      "x": 8,
+      "y": 0,
+      "w": 1,
+      "h": 1
+    },
+    "partition-side": {
+      "gid": 9,
+      "x": 9,
+      "y": 0,
+      "w": 1,
+      "h": 1
+    },
+    "window": {
+      "gid": 10,
+      "x": 10,
+      "y": 0,
+      "w": 4,
+      "h": 2
+    },
+    "sign-study": {
+      "gid": 32,
+      "x": 0,
+      "y": 2,
+      "w": 5,
+      "h": 1
+    },
+    "sign-principal": {
+      "gid": 37,
+      "x": 5,
+      "y": 2,
+      "w": 5,
+      "h": 1
+    },
+    "sign-meeting": {
+      "gid": 42,
+      "x": 10,
+      "y": 2,
+      "w": 5,
+      "h": 1
+    },
+    "sign-lounge": {
+      "gid": 48,
+      "x": 0,
+      "y": 3,
+      "w": 6,
+      "h": 1
+    },
+    "sign-library": {
+      "gid": 54,
+      "x": 6,
+      "y": 3,
+      "w": 5,
+      "h": 1
+    },
+    "sign-teacher": {
+      "gid": 59,
+      "x": 11,
+      "y": 3,
+      "w": 5,
+      "h": 1
+    },
+    "desk-pc": {
+      "gid": 64,
+      "x": 0,
+      "y": 4,
+      "w": 4,
+      "h": 2
+    },
+    "desk-teacher": {
+      "gid": 68,
+      "x": 4,
+      "y": 4,
+      "w": 4,
+      "h": 2
+    },
+    "desk-principal": {
+      "gid": 72,
+      "x": 8,
+      "y": 4,
+      "w": 5,
+      "h": 2
+    },
+    "monitor-off": {
+      "gid": 77,
+      "x": 13,
+      "y": 4,
+      "w": 1,
+      "h": 1
+    },
+    "monitor-on": {
+      "gid": 78,
+      "x": 14,
+      "y": 4,
+      "w": 1,
+      "h": 1
+    },
+    "chair": {
+      "gid": 79,
+      "x": 15,
+      "y": 4,
+      "w": 1,
+      "h": 1
+    },
+    "chair-office": {
+      "gid": 96,
+      "x": 0,
+      "y": 6,
+      "w": 1,
+      "h": 1
+    },
+    "table-meeting": {
+      "gid": 97,
+      "x": 1,
+      "y": 6,
+      "w": 5,
+      "h": 3
+    },
+    "bookshelf": {
+      "gid": 102,
+      "x": 6,
+      "y": 6,
+      "w": 3,
+      "h": 2
+    },
+    "plant-big": {
+      "gid": 105,
+      "x": 9,
+      "y": 6,
+      "w": 1,
+      "h": 2
+    },
+    "couch": {
+      "gid": 106,
+      "x": 10,
+      "y": 6,
+      "w": 3,
+      "h": 1
+    },
+    "coffee-table": {
+      "gid": 109,
+      "x": 13,
+      "y": 6,
+      "w": 2,
+      "h": 1
+    },
+    "counter": {
+      "gid": 144,
+      "x": 0,
+      "y": 9,
+      "w": 9,
+      "h": 2
+    },
+    "coffee-machine": {
+      "gid": 153,
+      "x": 9,
+      "y": 9,
+      "w": 1,
+      "h": 1
+    },
+    "sink": {
+      "gid": 154,
+      "x": 10,
+      "y": 9,
+      "w": 1,
+      "h": 1
+    },
+    "water-cooler": {
+      "gid": 155,
+      "x": 11,
+      "y": 9,
+      "w": 1,
+      "h": 2
+    },
+    "vending": {
+      "gid": 156,
+      "x": 12,
+      "y": 9,
+      "w": 2,
+      "h": 3
+    },
+    "reception": {
+      "gid": 192,
+      "x": 0,
+      "y": 12,
+      "w": 7,
+      "h": 2
+    },
+    "lockers": {
+      "gid": 199,
+      "x": 7,
+      "y": 12,
+      "w": 3,
+      "h": 2
+    },
+    "printer": {
+      "gid": 202,
+      "x": 10,
+      "y": 12,
+      "w": 2,
+      "h": 1
+    },
+    "bin": {
+      "gid": 204,
+      "x": 12,
+      "y": 12,
+      "w": 1,
+      "h": 1
+    },
+    "chalkboard": {
+      "gid": 224,
+      "x": 0,
+      "y": 14,
+      "w": 6,
+      "h": 2
+    },
+    "school-crest": {
+      "gid": 230,
+      "x": 6,
+      "y": 14,
+      "w": 2,
+      "h": 2
+    },
+    "door": {
+      "gid": 232,
+      "x": 8,
+      "y": 14,
+      "w": 2,
+      "h": 1
+    }
+  },
+  "layout": {
+    "anchors": {
+      "calendar": {
+        "x": 23,
+        "y": 0
+      },
+      "clock": {
+        "x": 3,
+        "y": 0
+      },
+      "boards": {
+        "x": 24,
+        "y": 1
+      },
+      "questions": {
+        "x": 31,
+        "y": 1
+      },
+      "boardStands": {
+        "pin": {
+          "x": 25,
+          "y": 2
+        },
+        "take": {
+          "x": 27,
+          "y": 2
+        },
+        "archive": {
+          "x": 29,
+          "y": 2
+        }
+      }
+    },
+    "coffee": {
+      "trayTile": {
+        "x": 17,
+        "y": 3
+      },
+      "trayStand": {
+        "x": 17,
+        "y": 5
+      },
+      "machineStand": {
+        "x": 14,
+        "y": 5
+      },
+      "machineTile": {
+        "x": 14,
+        "y": 3
+      },
+      "sinkTile": {
+        "x": 20,
+        "y": 3
+      },
+      "sinkStand": {
+        "x": 20,
+        "y": 5
+      },
+      "maxCups": 4
+    },
+    "errandSpots": [
+      {
+        "kind": "water",
+        "stand": {
+          "x": 26,
+          "y": 4
+        },
+        "facing": "right",
+        "fx": {
+          "x": 27,
+          "y": 4
+        },
+        "duration": 4.5
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 9,
+          "y": 9
+        },
+        "facing": "down",
+        "fx": {
+          "x": 9,
+          "y": 11
+        },
+        "duration": 4.5
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 11,
+          "y": 17
+        },
+        "facing": "left",
+        "fx": {
+          "x": 10,
+          "y": 17
+        },
+        "duration": 4.5
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 36,
+          "y": 6
+        },
+        "facing": "right",
+        "fx": {
+          "x": 37,
+          "y": 6
+        },
+        "duration": 4.5,
+        "godOnly": true
+      },
+      {
+        "kind": "window",
+        "stand": {
+          "x": 6,
+          "y": 2
+        },
+        "facing": "up",
+        "fx": {
+          "x": 6,
+          "y": 1
+        },
+        "duration": 5
+      },
+      {
+        "kind": "window",
+        "stand": {
+          "x": 11,
+          "y": 2
+        },
+        "facing": "up",
+        "fx": {
+          "x": 11,
+          "y": 1
+        },
+        "duration": 5
+      },
+      {
+        "kind": "dispenser",
+        "stand": {
+          "x": 23,
+          "y": 5
+        },
+        "facing": "up",
+        "fx": {
+          "x": 23,
+          "y": 4
+        },
+        "duration": 3.5
+      },
+      {
+        "kind": "fridge",
+        "stand": {
+          "x": 8,
+          "y": 24
+        },
+        "facing": "right",
+        "fx": {
+          "x": 9,
+          "y": 25
+        },
+        "duration": 3.2
+      },
+      {
+        "kind": "shelf",
+        "stand": {
+          "x": 5,
+          "y": 15
+        },
+        "facing": "right",
+        "fx": {
+          "x": 6,
+          "y": 15
+        },
+        "duration": 4
+      },
+      {
+        "kind": "bin",
+        "stand": {
+          "x": 12,
+          "y": 24
+        },
+        "facing": "down",
+        "fx": {
+          "x": 12,
+          "y": 25
+        },
+        "duration": 2.6
+      },
+      {
+        "kind": "bin",
+        "stand": {
+          "x": 36,
+          "y": 25
+        },
+        "facing": "right",
+        "fx": {
+          "x": 37,
+          "y": 25
+        },
+        "duration": 2.6
+      }
+    ],
+    "monitor": {
+      "offTopLeftGid": 2526,
+      "onGids": [
+        [
+          2527,
+          0,
+          0
+        ]
+      ],
+      "screenRect": {
+        "x": 3,
+        "y": 3,
+        "w": 10,
+        "h": 6
+      }
+    }
+  }
+}

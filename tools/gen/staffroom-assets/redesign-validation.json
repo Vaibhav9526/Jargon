@@ -1,0 +1,174 @@
+{
+  "builder": "python tools/build-school-world.py (isolated copy; production source untouched)",
+  "props": 41,
+  "mapTiles": [
+    40,
+    28
+  ],
+  "atlasSize": [
+    256,
+    512
+  ],
+  "reachability": 31,
+  "collisionAndAnchors": "unchanged from the canonical builder",
+  "sprites": {
+    "principal": {
+      "portrait": "sprites/principal-redesigned-portrait.png",
+      "walk": "sprites/principal-redesigned-walk.png",
+      "portraitSize": [
+        18,
+        28
+      ],
+      "sheetSize": [
+        108,
+        32
+      ],
+      "frameSize": [
+        18,
+        32
+      ],
+      "frames": [
+        "front-idle",
+        "front-left",
+        "front-right",
+        "back-idle",
+        "back-left",
+        "back-right"
+      ],
+      "optionalArtOnly": false,
+      "opaqueColors": 5
+    },
+    "teacher": {
+      "portrait": "sprites/teacher-redesigned-portrait.png",
+      "walk": "sprites/teacher-redesigned-walk.png",
+      "portraitSize": [
+        18,
+        28
+      ],
+      "sheetSize": [
+        108,
+        32
+      ],
+      "frameSize": [
+        18,
+        32
+      ],
+      "frames": [
+        "front-idle",
+        "front-left",
+        "front-right",
+        "back-idle",
+        "back-left",
+        "back-right"
+      ],
+      "optionalArtOnly": false,
+      "opaqueColors": 5
+    },
+    "topper": {
+      "portrait": "sprites/topper-redesigned-portrait.png",
+      "walk": "sprites/topper-redesigned-walk.png",
+      "portraitSize": [
+        18,
+        28
+      ],
+      "sheetSize": [
+        108,
+        32
+      ],
+      "frameSize": [
+        18,
+        32
+      ],
+      "frames": [
+        "front-idle",
+        "front-left",
+        "front-right",
+        "back-idle",
+        "back-left",
+        "back-right"
+      ],
+      "optionalArtOnly": false,
+      "opaqueColors": 5
+    },
+    "smartguy": {
+      "portrait": "sprites/smartguy-redesigned-portrait.png",
+      "walk": "sprites/smartguy-redesigned-walk.png",
+      "portraitSize": [
+        18,
+        28
+      ],
+      "sheetSize": [
+        108,
+        32
+      ],
+      "frameSize": [
+        18,
+        32
+      ],
+      "frames": [
+        "front-idle",
+        "front-left",
+        "front-right",
+        "back-idle",
+        "back-left",
+        "back-right"
+      ],
+      "optionalArtOnly": false,
+      "opaqueColors": 5
+    },
+    "librarian": {
+      "portrait": "sprites/librarian-redesigned-portrait.png",
+      "walk": "sprites/librarian-redesigned-walk.png",
+      "portraitSize": [
+        18,
+        28
+      ],
+      "sheetSize": [
+        108,
+        32
+      ],
+      "frameSize": [
+        18,
+        32
+      ],
+      "frames": [
+        "front-idle",
+        "front-left",
+        "front-right",
+        "back-idle",
+        "back-left",
+        "back-right"
+      ],
+      "optionalArtOnly": false,
+      "opaqueColors": 5
+    },
+    "vice-principal": {
+      "portrait": "sprites/vice-principal-redesigned-portrait.png",
+      "walk": "sprites/vice-principal-redesigned-walk.png",
+      "portraitSize": [
+        18,
+        28
+      ],
+      "sheetSize": [
+        108,
+        32
+      ],
+      "frameSize": [
+        18,
+        32
+      ],
+      "frames": [
+        "front-idle",
+        "front-left",
+        "front-right",
+        "back-idle",
+        "back-left",
+        "back-right"
+      ],
+      "optionalArtOnly": true,
+      "opaqueColors": 5
+    }
+  },
+  "productionSourceChangedDuringGeneration": [],
+  "runtimeIntegration": "candidate art only; production PNGs and procedural character recipes are not changed"
+}

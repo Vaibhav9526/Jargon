@@ -1,0 +1,602 @@
+{
+  "monitorOff": 43,
+  "monitorOn": 42,
+  "office": {
+    "width": 34,
+    "height": 22,
+    "seats": [
+      "desk-ceo",
+      "pc-1",
+      "pc-2",
+      "pc-3",
+      "pc-4",
+      "pc-5",
+      "pc-6",
+      "desk-chief-architect",
+      "desk-product-manager",
+      "desk-team-lead",
+      "desk-backend-engineer",
+      "desk-ui-ux-expert",
+      "desk-data-engineer",
+      "desk-project-manager",
+      "desk-market-researcher",
+      "desk-agent-organizer"
+    ],
+    "coffee": {
+      "trayTile": {
+        "x": 25,
+        "y": 2
+      },
+      "trayStand": {
+        "x": 25,
+        "y": 4
+      },
+      "machineTile": {
+        "x": 26,
+        "y": 2
+      },
+      "machineStand": {
+        "x": 26,
+        "y": 4
+      },
+      "sinkTile": {
+        "x": 27,
+        "y": 2
+      },
+      "sinkStand": {
+        "x": 27,
+        "y": 4
+      }
+    },
+    "anchors": {
+      "calendar": {
+        "x": 2,
+        "y": 8
+      },
+      "boards": {
+        "x": 7,
+        "y": 9
+      },
+      "clock": {
+        "x": 1,
+        "y": 0
+      },
+      "questions": {
+        "x": 16,
+        "y": 9
+      }
+    },
+    "errands": [
+      {
+        "kind": "water",
+        "stand": {
+          "x": 4,
+          "y": 3
+        },
+        "facing": "right",
+        "fx": {
+          "x": 5,
+          "y": 3
+        },
+        "duration": 4.5,
+        "godOnly": true
+      },
+      {
+        "kind": "smoke",
+        "stand": {
+          "x": 3,
+          "y": 2
+        },
+        "facing": "up",
+        "fx": {
+          "x": 3,
+          "y": 1
+        },
+        "duration": 18,
+        "godOnly": true
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 10,
+          "y": 4
+        },
+        "facing": "up",
+        "fx": {
+          "x": 10,
+          "y": 3
+        },
+        "duration": 4.5
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 21,
+          "y": 4
+        },
+        "facing": "up",
+        "fx": {
+          "x": 21,
+          "y": 3
+        },
+        "duration": 4.5
+      },
+      {
+        "kind": "window",
+        "stand": {
+          "x": 11,
+          "y": 2
+        },
+        "facing": "up",
+        "fx": {
+          "x": 11,
+          "y": 1
+        },
+        "duration": 5
+      },
+      {
+        "kind": "window",
+        "stand": {
+          "x": 20,
+          "y": 2
+        },
+        "facing": "up",
+        "fx": {
+          "x": 20,
+          "y": 1
+        },
+        "duration": 5
+      },
+      {
+        "kind": "fridge",
+        "stand": {
+          "x": 24,
+          "y": 4
+        },
+        "facing": "up",
+        "fx": {
+          "x": 24,
+          "y": 3
+        },
+        "duration": 3.2
+      },
+      {
+        "kind": "dispenser",
+        "stand": {
+          "x": 31,
+          "y": 4
+        },
+        "facing": "up",
+        "fx": {
+          "x": 31,
+          "y": 3
+        },
+        "duration": 3.5
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 32,
+          "y": 4
+        },
+        "facing": "up",
+        "fx": {
+          "x": 32,
+          "y": 3
+        },
+        "duration": 4.5
+      },
+      {
+        "kind": "bin",
+        "stand": {
+          "x": 24,
+          "y": 7
+        },
+        "facing": "left",
+        "fx": {
+          "x": 23,
+          "y": 7
+        },
+        "duration": 2.6
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 9,
+          "y": 12
+        },
+        "facing": "up",
+        "fx": {
+          "x": 9,
+          "y": 11
+        },
+        "duration": 4.5
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 19,
+          "y": 12
+        },
+        "facing": "up",
+        "fx": {
+          "x": 19,
+          "y": 11
+        },
+        "duration": 4.5
+      },
+      {
+        "kind": "bin",
+        "stand": {
+          "x": 10,
+          "y": 18
+        },
+        "facing": "down",
+        "fx": {
+          "x": 10,
+          "y": 19
+        },
+        "duration": 2.6
+      },
+      {
+        "kind": "dispenser",
+        "stand": {
+          "x": 32,
+          "y": 12
+        },
+        "facing": "up",
+        "fx": {
+          "x": 32,
+          "y": 11
+        },
+        "duration": 3.5
+      },
+      {
+        "kind": "shelf",
+        "stand": {
+          "x": 27,
+          "y": 18
+        },
+        "facing": "left",
+        "fx": {
+          "x": 26,
+          "y": 18
+        },
+        "duration": 4
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 26,
+          "y": 20
+        },
+        "facing": "left",
+        "fx": {
+          "x": 25,
+          "y": 20
+        },
+        "duration": 4.5
+      },
+      {
+        "kind": "bin",
+        "stand": {
+          "x": 32,
+          "y": 17
+        },
+        "facing": "up",
+        "fx": {
+          "x": 32,
+          "y": 16
+        },
+        "duration": 2.6
+      }
+    ]
+  },
+  "school": {
+    "width": 34,
+    "height": 22,
+    "seats": [
+      "pc-1",
+      "pc-2",
+      "pc-3",
+      "pc-4",
+      "pc-5",
+      "desk-ceo",
+      "pc-6"
+    ],
+    "coffee": {
+      "trayTile": {
+        "x": 3,
+        "y": 13
+      },
+      "trayStand": {
+        "x": 3,
+        "y": 15
+      },
+      "machineTile": {
+        "x": 4,
+        "y": 13
+      },
+      "machineStand": {
+        "x": 4,
+        "y": 15
+      },
+      "sinkTile": {
+        "x": 5,
+        "y": 13
+      },
+      "sinkStand": {
+        "x": 5,
+        "y": 15
+      }
+    },
+    "anchors": {
+      "calendar": {
+        "x": 6,
+        "y": 11
+      },
+      "boards": {
+        "x": 11,
+        "y": 1
+      },
+      "clock": {
+        "x": 1,
+        "y": 0
+      },
+      "questions": {
+        "x": 9,
+        "y": 1
+      },
+      "boardPin": {
+        "x": 13,
+        "y": 2
+      },
+      "boardTake": {
+        "x": 15,
+        "y": 2
+      },
+      "boardArchive": {
+        "x": 17,
+        "y": 2
+      }
+    },
+    "errands": [
+      {
+        "kind": "window",
+        "stand": {
+          "x": 2,
+          "y": 2
+        },
+        "facing": "up",
+        "fx": {
+          "x": 2,
+          "y": 1
+        },
+        "duration": 5
+      },
+      {
+        "kind": "window",
+        "stand": {
+          "x": 18,
+          "y": 2
+        },
+        "facing": "up",
+        "fx": {
+          "x": 18,
+          "y": 1
+        },
+        "duration": 5
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 1,
+          "y": 8
+        },
+        "facing": "up",
+        "fx": {
+          "x": 1,
+          "y": 7
+        },
+        "duration": 4.5
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 20,
+          "y": 10
+        },
+        "facing": "up",
+        "fx": {
+          "x": 20,
+          "y": 9
+        },
+        "duration": 4.5
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 8,
+          "y": 4
+        },
+        "facing": "up",
+        "fx": {
+          "x": 8,
+          "y": 3
+        },
+        "duration": 4.5
+      },
+      {
+        "kind": "shelf",
+        "stand": {
+          "x": 2,
+          "y": 3
+        },
+        "facing": "left",
+        "fx": {
+          "x": 1,
+          "y": 3
+        },
+        "duration": 4
+      },
+      {
+        "kind": "bin",
+        "stand": {
+          "x": 20,
+          "y": 6
+        },
+        "facing": "up",
+        "fx": {
+          "x": 20,
+          "y": 5
+        },
+        "duration": 2.6
+      },
+      {
+        "kind": "fridge",
+        "stand": {
+          "x": 2,
+          "y": 15
+        },
+        "facing": "up",
+        "fx": {
+          "x": 2,
+          "y": 14
+        },
+        "duration": 3.2
+      },
+      {
+        "kind": "dispenser",
+        "stand": {
+          "x": 9,
+          "y": 15
+        },
+        "facing": "up",
+        "fx": {
+          "x": 9,
+          "y": 14
+        },
+        "duration": 3.5
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 11,
+          "y": 17
+        },
+        "facing": "up",
+        "fx": {
+          "x": 11,
+          "y": 16
+        },
+        "duration": 4.5
+      },
+      {
+        "kind": "bin",
+        "stand": {
+          "x": 2,
+          "y": 20
+        },
+        "facing": "left",
+        "fx": {
+          "x": 1,
+          "y": 20
+        },
+        "duration": 2.6
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 19,
+          "y": 13
+        },
+        "facing": "right",
+        "fx": {
+          "x": 20,
+          "y": 14
+        },
+        "duration": 4.5
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 32,
+          "y": 4
+        },
+        "facing": "up",
+        "fx": {
+          "x": 32,
+          "y": 3
+        },
+        "duration": 4.5,
+        "godOnly": true
+      },
+      {
+        "kind": "smoke",
+        "stand": {
+          "x": 24,
+          "y": 2
+        },
+        "facing": "up",
+        "fx": {
+          "x": 24,
+          "y": 1
+        },
+        "duration": 18,
+        "godOnly": true
+      },
+      {
+        "kind": "shelf",
+        "stand": {
+          "x": 26,
+          "y": 13
+        },
+        "facing": "up",
+        "fx": {
+          "x": 26,
+          "y": 12
+        },
+        "duration": 4
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 31,
+          "y": 12
+        },
+        "facing": "up",
+        "fx": {
+          "x": 31,
+          "y": 11
+        },
+        "duration": 4.5
+      },
+      {
+        "kind": "water",
+        "stand": {
+          "x": 32,
+          "y": 18
+        },
+        "facing": "down",
+        "fx": {
+          "x": 32,
+          "y": 20
+        },
+        "duration": 4.5
+      },
+      {
+        "kind": "bin",
+        "stand": {
+          "x": 30,
+          "y": 20
+        },
+        "facing": "right",
+        "fx": {
+          "x": 31,
+          "y": 20
+        },
+        "duration": 2.6
+      }
+    ]
+  }
+}

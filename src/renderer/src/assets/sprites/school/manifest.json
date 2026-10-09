@@ -1,0 +1,44 @@
+{
+  "frameSize": [
+    18,
+    32
+  ],
+  "portraitSize": [
+    18,
+    28
+  ],
+  "sheetSize": [
+    108,
+    32
+  ],
+  "frames": [
+    "front-idle",
+    "front-left",
+    "front-right",
+    "back-idle",
+    "back-left",
+    "back-right"
+  ],
+  "characters": {
+    "principal": {
+      "portrait": "principal-portrait.png",
+      "walk": "principal-walk.png"
+    },
+    "teacher": {
+      "portrait": "teacher-portrait.png",
+      "walk": "teacher-walk.png"
+    },
+    "topper": {
+      "portrait": "topper-portrait.png",
+      "walk": "topper-walk.png"
+    },
+    "smartguy": {
+      "portrait": "smartguy-portrait.png",
+      "walk": "smartguy-walk.png"
+    },
+    "librarian": {
+      "portrait": "librarian-portrait.png",
+      "walk": "librarian-walk.png"
+    }
+  }
+}

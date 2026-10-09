@@ -1,0 +1,22 @@
+NOTE ON BUNDLED ART ASSETS
+
+The MIT License in LICENSE applies to the SOURCE CODE of this project. It does
+NOT apply to the bundled pixel-art assets under src/renderer/src/assets/
+(tilesets and maps). Those are "Modern Interiors - RPG Tileset [16X16]" by
+LimeZu, licensed separately under the LimeZu Complete Version license, which
+permits editing and use in commercial and non-commercial projects and REQUIRES
+credit to LimeZu (https://limezu.itch.io/).
+
+The "Modern" tileset (src/renderer/src/assets/tilesets/emakina-atlas.png and
+the *-modern.tmj maps) is built from art in EmakinaFR/office-map
+(https://github.com/EmakinaFR/office-map). That repository publishes no licence
+file; the art is used here WITH THE PERMISSION OF ITS OWNER, granted to the
+Jargon maintainer. Nothing in the MIT License grants anyone else rights to that
+art: if you fork or redistribute Jargon, remove the Modern tileset (or obtain
+your own permission) first. The Star Wars sheet in that repository is NOT used.
+
+The Office cast sprites are not LimeZu art -- they are drawn procedurally in
+src/renderer/src/scene/office/portraitArt.ts and are covered by the MIT License
+like the rest of the source.
+
+See src/renderer/src/assets/ATTRIBUTION.md for details.

@@ -1,0 +1,236 @@
+{
+  "nativeGrid": [
+    64,
+    64
+  ],
+  "exportSize": [
+    512,
+    512
+  ],
+  "resampling": "nearest-neighbor 8x",
+  "paletteSource": "redesign-art.py school cast",
+  "expressionOrder": [
+    "neutral",
+    "smug",
+    "annoyed",
+    "eye-roll",
+    "excited",
+    "thinking",
+    "shocked",
+    "laughing"
+  ],
+  "poseChecks": "expression alpha masks identical; changed pixels restricted to face rectangle",
+  "runtimeIntegration": "new art only; no production source edits",
+  "files": [
+    {
+      "file": "id-cards/teacher.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "a2c103f7fb733573bbbd3ba1c863958664505abe329fb02d4f9492b11a065518"
+    },
+    {
+      "file": "id-cards/topper.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "cddd44c55e090fe536361a16e8804351ca0ae1e3c69ca59b861774f18bfea5f7"
+    },
+    {
+      "file": "expressions/topper/neutral.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "cddd44c55e090fe536361a16e8804351ca0ae1e3c69ca59b861774f18bfea5f7"
+    },
+    {
+      "file": "expressions/topper/smug.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "1cfe045fbdbb98ac510b1697af2fbd372076c72fa50744b427bd5d40aaa60f5c"
+    },
+    {
+      "file": "expressions/topper/annoyed.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "cca8f112ede2e9aa9982bcbf0e4250f7a48dda3d5c2360d1b6dfcc999c142cf6"
+    },
+    {
+      "file": "expressions/topper/eye-roll.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "a58f7235c59877e40ef82a05d08df6fdd3a67305c12868bab5020195b6e7a889"
+    },
+    {
+      "file": "expressions/topper/excited.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "b7d9c310b816c61cb133e684de9a3259c30aa845ef7a533e91e5d533f4eaf638"
+    },
+    {
+      "file": "expressions/topper/thinking.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "6ff2808cd62acf8624d94f5f6db35f5dd16a1132f17ae137686cf834d7442f44"
+    },
+    {
+      "file": "expressions/topper/shocked.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "bd5cfd97f68e2816078cae48d1098ad2ed30a8f43054995f8aaf947cf15cd639"
+    },
+    {
+      "file": "expressions/topper/laughing.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "17433199c487103293b6580dd0844565e08c6cb10f2db41d151fb3628130bf26"
+    },
+    {
+      "file": "id-cards/smartguy.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "c3e0e04a1a66efb5a2b4dd07abedc53140df6aaa4a44e37adb86520910492bca"
+    },
+    {
+      "file": "expressions/smartguy/neutral.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "c3e0e04a1a66efb5a2b4dd07abedc53140df6aaa4a44e37adb86520910492bca"
+    },
+    {
+      "file": "expressions/smartguy/smug.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "7fdc12f5cf1e37db8dd4783e741ac29a46ad6df658cd1cb0d66e96ad009fbdc4"
+    },
+    {
+      "file": "expressions/smartguy/annoyed.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "a83dbeb8caa7fad76dc1ad3ab35b7958ab2a2c64ce6449a154517a9950c7a184"
+    },
+    {
+      "file": "expressions/smartguy/eye-roll.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "861dc5d5f061950bcf57067007afcd9de3cfd673046abbdb1305ba64a3247183"
+    },
+    {
+      "file": "expressions/smartguy/excited.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "0a0c44b7bdee6f8faef81224601e42b655140b5bce937a9e8fc1eff9add2f90e"
+    },
+    {
+      "file": "expressions/smartguy/thinking.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "b7a424322b3a0f26ab75556e79696298d4479373a64d6fefeaf75d58b8bf138c"
+    },
+    {
+      "file": "expressions/smartguy/shocked.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "848769db23959ce86deaf41052fd1fcb1a1064d7a6550bf0bae2ae153dc6e6c8"
+    },
+    {
+      "file": "expressions/smartguy/laughing.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "6bb8cdcbe531770a1526d35d917e684d6c466c82b259256a2e542067424b5bf7"
+    },
+    {
+      "file": "id-cards/librarian.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "5b7957b21bec03b3642d2cedb54f4d3cc4ffe9baeacbdc5b93e1e75d9902d480"
+    },
+    {
+      "file": "id-cards/vice-principal.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "alpha": "binary transparency",
+      "sha256": "61f239bf5e2c6bd640609d973b3b285072adef2b5f3e4bbfdde1930e53b94794"
+    }
+  ]
+}
