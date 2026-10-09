@@ -100,13 +100,15 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [mailOpen, setMailOpen] = useState(false);
   const [mailRequest, setMailRequest] = useState('');
+  const [mailDraft, setMailDraft] = useState<import('@shared/mailAsk').MailDraft | null>(null);
   const officeThemeNow = useStore((s) => s.officeTheme);
   const onOfficeFloor = officeThemeNow === 'office';
   const onStaffroom = officeThemeNow === 'staffroom';
   useEffect(() => {
     const open = (e: Event) => {
-      const detail = (e as CustomEvent<{ request?: string } | undefined>).detail;
+      const detail = (e as CustomEvent<{ request?: string; draft?: import('@shared/mailAsk').MailDraft } | undefined>).detail;
       setMailRequest(typeof detail?.request === 'string' ? detail.request : '');
+      setMailDraft(detail?.draft ?? null);
       setMailOpen(true);
     };
     window.addEventListener('jargon:open-mail', open);
@@ -592,7 +594,7 @@ export function App() {
         />
       )}
 
-      {mailOpen && onOfficeFloor && <MailPanel request={mailRequest} onClose={() => setMailOpen(false)} />}
+      {mailOpen && onOfficeFloor && <MailPanel request={mailRequest} draft={mailDraft} onClose={() => setMailOpen(false)} />}
 
       {quitWarn && (
         <QuitWarningModal

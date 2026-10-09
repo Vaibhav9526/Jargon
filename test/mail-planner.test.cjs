@@ -272,3 +272,13 @@ test('the time budget stops AI steps instead of hanging', async () => {
   assert.equal(r.items[0].kind, 'error');
   assert.match(r.items[0].text, /out of time/i);
 });
+
+test('"today" / "yesterday" / "last N days" become a sinceDays filter, even without the AI planner', () => {
+  const { sinceFromText, fallbackPlan } = loadTs('src/main/mailPlanner.ts');
+  assert.equal(sinceFromText('summarize unread mail sent today'), 0);
+  assert.equal(sinceFromText('mail from yesterday'), 1);
+  assert.equal(sinceFromText('last 3 days'), 3);
+  assert.equal(sinceFromText('summarize my mail'), undefined);
+  const steps = fallbackPlan('summarize the mail which was unread and was sent today', { selectedUid: null, hasDraft: false });
+  assert.deepEqual(steps[0], { op: 'list', unreadOnly: true, limit: 15, sinceDays: 0 });
+});

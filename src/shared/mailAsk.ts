@@ -51,6 +51,8 @@ export type MailAskItem =
 export interface MailAskInput {
   request: string;
   selectedUid?: number | null;
+  /** 'compose': skip the planner and write one new mail from `request` (needs an address in it). */
+  mode?: 'compose';
   draft?: { to?: string; cc?: string; subject?: string; text?: string } | null;
 }
 

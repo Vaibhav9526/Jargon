@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { MailAskItem, MailAskResult, MailDraft, MailProviderInfo } from '@shared/mailAsk';
 import { PixelPanel } from './PixelPanel';
 import { PixelButton } from './PixelButton';
@@ -8,7 +10,7 @@ type Summary = { uid: number; from: string; subject: string; date: string | null
 type Full = NonNullable<Awaited<ReturnType<typeof window.cth.mailRead>>['message']>;
 type Facts = NonNullable<Awaited<ReturnType<typeof window.cth.mailRead>>['facts']>;
 type Tab = 'read' | 'summary' | 'details' | 'write';
-type Status = { configured: boolean; user?: string; provider?: string; office: boolean };
+type Status = { configured: boolean; user?: string; provider?: string; office: boolean; googleClient?: boolean };
 type DraftState = { to: string; cc: string; subject: string; text: string };
 
 const box: React.CSSProperties = {
@@ -51,7 +53,7 @@ if (typeof window !== 'undefined') {
 }
 
 /** Jargon Mail — Office floor only. Sign in once, then ask the Mailman. */
-export function MailPanel({ onClose, request = '' }: { onClose: () => void; request?: string }) {
+export function MailPanel({ onClose, request = '', draft = null }: { onClose: () => void; request?: string; draft?: MailDraft | null }) {
   const [status, setStatus] = useState<Status | null>(null);
   const [statusErr, setStatusErr] = useState('');
   const [switching, setSwitching] = useState(false);
@@ -130,10 +132,10 @@ export function MailPanel({ onClose, request = '' }: { onClose: () => void; requ
             ) : !status.configured || switching ? (
               <>
                 {statusErr && <div role="alert" style={{ padding: '8px 16px 0', ...errStyle }}>{statusErr}</div>}
-                <SignIn onDone={refreshStatus} onCancel={switching ? () => setSwitching(false) : undefined} />
+                <SignIn onDone={refreshStatus} onCancel={switching ? () => setSwitching(false) : undefined} googleClient={!!status.googleClient} />
               </>
             ) : (
-              <Inbox user={status.user ?? ''} takeRequest={takeRequest} nonce={nonce} />
+              <Inbox user={status.user ?? ''} takeRequest={takeRequest} nonce={nonce} startDraft={draft} />
             )}
           </div>
         </PixelPanel>
@@ -144,7 +146,17 @@ export function MailPanel({ onClose, request = '' }: { onClose: () => void; requ
 
 // ─── sign-in ────────────────────────────────────────────────────────────────
 
-function SignIn({ onDone, onCancel }: { onDone: () => void; onCancel?: () => void }) {
+function SignIn({ onDone, onCancel, googleClient }: { onDone: () => void; onCancel?: () => void; googleClient: boolean }) {
+  const [gBusy, setGBusy] = useState(false);
+  const [gErr, setGErr] = useState('');
+  const googleSignIn = async () => {
+    if (gBusy) return;
+    setGBusy(true); setGErr('');
+    try {
+      const res = await deadline(window.cth.mailGoogleSignIn(), CONNECT_DEADLINE_MS, 'Signing in with Google');
+      if (res.ok) onDone(); else setGErr(res.error ?? 'Google sign-in failed.');
+    } catch (e) { setGErr(msg(e, 'Google sign-in failed.')); } finally { setGBusy(false); }
+  };
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
   const [prov, setProv] = useState<MailProviderInfo | null>(null);
@@ -205,6 +217,12 @@ function SignIn({ onDone, onCancel }: { onDone: () => void; onCancel?: () => voi
     <div onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT' && user.trim() && pass) { e.preventDefault(); void connect(); } }}
       style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 480, overflowY: 'auto' }}>
       <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--cth-ink-900)' }}>Sign in to your mailbox</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingBottom: 8, borderBottom: '1px solid var(--cth-ink-100)' }}>
+        <div><PixelButton variant="primary" size="sm" disabled={!googleClient || gBusy} onClick={() => { void googleSignIn(); }}>{gBusy ? 'Waiting for Google…' : 'Sign in with Google'}</PixelButton></div>
+        {!googleClient && <span style={muted}>One-time setup: add your Google OAuth client in Settings → Connections → Email, then come back here.</span>}
+        {gErr && <span role="alert" style={errStyle}>{gErr}</span>}
+        <span style={muted}>Or use an app password:</span>
+      </div>
       <span style={{ fontSize: 12, lineHeight: '17px', color: 'var(--cth-ink-700, var(--cth-ink-900))' }}>
         Your password is encrypted on this device and never leaves it except to your mail server. The Mailman never sends anything until you press Send.
       </span>
@@ -260,7 +278,7 @@ const SUGGESTIONS = ['Summarize my unread mail', 'What action items and dates ar
 
 type AskOk = Extract<MailAskResult, { ok: true }>;
 
-function Inbox({ user, takeRequest, nonce }: { user: string; takeRequest: () => string; nonce: number }) {
+function Inbox({ user, takeRequest, nonce, startDraft = null }: { user: string; takeRequest: () => string; nonce: number; startDraft?: MailDraft | null }) {
   const [list, setList] = useState<Summary[]>([]);
   const [listTitle, setListTitle] = useState('Inbox');
   const [loading, setLoading] = useState(false);
@@ -279,10 +297,11 @@ function Inbox({ user, takeRequest, nonce }: { user: string; takeRequest: () => 
   const draftRef = useRef<DraftState | null>(null);
   const onDraft = useCallback((d: DraftState | null) => { draftRef.current = d; }, []);
 
-  const load = useCallback(async (q: string, u: boolean) => {
-    setLoading(true); setErr('');
+  const [pageSize, setPageSize] = useState(40);
+  const load = useCallback(async (q: string, u: boolean, limit = 40) => {
+    setLoading(true); setErr(''); setPageSize(limit);
     try {
-      const res = await deadline(window.cth.mailList({ limit: 40, unseenOnly: u, query: q }), READ_DEADLINE_MS, 'Loading mail');
+      const res = await deadline(window.cth.mailList({ limit, unseenOnly: u, query: q }), READ_DEADLINE_MS, 'Loading mail');
       if (res.ok) { setList(res.messages ?? []); setListTitle(q ? `Matching "${q}"` : u ? 'Unread' : 'Inbox'); }
       else setErr(res.error ?? 'Could not load mail.');
     } catch (e) {
@@ -369,6 +388,9 @@ function Inbox({ user, takeRequest, nonce }: { user: string; takeRequest: () => 
             )}
             {!loading && !err && list.length === 0 && <div style={{ padding: 10, ...muted }}>No messages.</div>}
             {list.map((m) => <MailRow key={m.uid} m={m} active={sel === m.uid} onClick={() => pick(m.uid)} />)}
+            {!loading && !err && list.length >= pageSize && pageSize < 1000 && (
+              <div style={{ padding: 8 }}><PixelButton variant="secondary" size="sm" onClick={() => { void load(query, unseen, Math.min(1000, pageSize + 100)); }}>Load more</PixelButton></div>
+            )}
           </div>
         </div>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -382,8 +404,13 @@ function Inbox({ user, takeRequest, nonce }: { user: string; takeRequest: () => 
             <MailmanResults busy={askBusy} phase={askPhase} error={askErr} answer={answer} user={user} onPick={pick} onStop={stop} onDraft={onDraft} />
           ) : sel === null ? (
             <div style={{ padding: '12px 16px', overflowY: 'auto' }}>
-              <div style={{ ...muted, marginBottom: 8 }}>Select a message — or ask the Mailman above.</div>
-              <Composer user={user} initial={null} onSent={() => undefined} onDraft={onDraft} />
+              {startDraft ? (
+                <>
+                  <div style={{ ...muted, marginBottom: 6 }}>The Mailman drafted this. Edit anything you like — nothing is sent until you press Send and confirm.</div>
+                  {startDraft.warnings.map((w) => <div key={w} style={{ ...errStyle, marginBottom: 4 }}>⚠ {w}</div>)}
+                </>
+              ) : <div style={{ ...muted, marginBottom: 8 }}>Select a message — or ask the Mailman above.</div>}
+              <Composer key={startDraft ? `draft:${startDraft.to}:${startDraft.subject}` : 'blank'} user={user} initial={startDraft ? draftInitial(startDraft) : null} onSent={() => undefined} onDraft={onDraft} />
             </div>
           ) : (
             <Reader key={sel} uid={sel} user={user} onDraft={onDraft} />
@@ -451,7 +478,7 @@ function AskItem({ item, user, onPick, onDraft }: { item: MailAskItem; user: str
       return (
         <div>
           {head(item.title)}
-          <pre style={pre}>{item.text}</pre>
+          <div className="cth-chat-md" style={{ fontSize: 13, lineHeight: '19px', color: 'var(--cth-ink-900)', overflowWrap: 'anywhere' }}><ReactMarkdown remarkPlugins={[remarkGfm]}>{item.text}</ReactMarkdown></div>
           {item.uid !== null && <button type="button" style={{ ...linkBtn, marginTop: 4 }} onClick={() => onPick(item.uid as number)}>Open this mail</button>}
         </div>
       );

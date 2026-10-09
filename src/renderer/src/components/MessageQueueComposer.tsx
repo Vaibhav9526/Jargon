@@ -2,6 +2,8 @@ import { ClipboardEvent, DragEvent, KeyboardEvent, type MouseEvent as ReactMouse
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { PixelButton } from './PixelButton';
+import { parseAddress } from '@shared/agentAddress';
+import { routeAddress } from './routeAddress';
 import { Icon } from './Icon';
 import { useStore, type Agent, type QueuedMessage } from '@/store/store';
 import { clearTerminalDraft, dismissTerminalPicker, terminalAutomationBlockFor } from './terminalPool';
@@ -154,21 +156,26 @@ export async function sendFileToolDraft(
   }
 }
 
-interface MentionOption { alias: string; hint: string; insert?: string; officeOnly?: boolean; action?: 'open-mail' }
+interface MentionOption { alias: string; hint: string; insert?: string; officeOnly?: boolean; schoolOnly?: boolean; mailmanOnly?: boolean; action?: 'open-mail' }
 const MENTION_OPTIONS: ReadonlyArray<MentionOption> = [
-  { alias: '@teacher', hint: 'Open the hosted learning site and hand the topic to the Teacher' },
-  { alias: '@teach-me', hint: 'Same as @teacher — teach me this topic' },
-  { alias: '@convert', hint: 'Librarian: PDF ↔ PPT, image → PDF, PDF → image — attach a file, e.g. “@convert to pdf”' },
-  { alias: '@compress', hint: 'Librarian: shrink an image by a percentage — e.g. “@compress 50%”' },
+  { alias: '@teacher', schoolOnly: true, hint: 'Open the hosted learning site and hand the topic to the Teacher' },
+  { alias: '@teach-me', schoolOnly: true, hint: 'Same as @teacher — teach me this topic' },
+  { alias: '@convert', schoolOnly: true, hint: 'Librarian: PDF ↔ PPT, image → PDF, PDF → image — attach a file, e.g. “@convert to pdf”' },
+  { alias: '@compress', schoolOnly: true, hint: 'Librarian: shrink an image by a percentage — e.g. “@compress 50%”' },
   // Office floor only: opens Jargon Mail (read / summarize / extract / rewrite / send).
   { alias: '@mailman', officeOnly: true, action: 'open-mail', hint: 'Mailman: open Mail — read, summarize, extract, rewrite and send' },
   { alias: '@email', officeOnly: true, action: 'open-mail', hint: 'Same as @mailman' },
   { alias: '@mail', officeOnly: true, action: 'open-mail', hint: 'Same as @mailman' },
-  { alias: '@inbox', officeOnly: true, action: 'open-mail', hint: 'Same as @mailman — your inbox' }
+  { alias: '@inbox', officeOnly: true, action: 'open-mail', hint: 'Same as @mailman — your inbox' },
+  // Mailman's own chat: answers land right here in the chat.
+  { alias: '@summarize', officeOnly: true, mailmanOnly: true, hint: 'Summarize your unread mail here in the chat — e.g. “@summarize unread mail from today”' },
+  { alias: '@compose', officeOnly: true, mailmanOnly: true, hint: 'Draft a mail: “@compose name@example.com what to say” — then edit and confirm' }
 ];
 
 export interface MessageQueueComposerProps {
   agent: Agent;
+  /** 'chat' = the rounded messenger pill used by the Office focus chat. */
+  variant?: 'default' | 'chat';
 }
 
 /**
@@ -176,7 +183,8 @@ export interface MessageQueueComposerProps {
  * messages park in a per-agent queue and are submitted to the agent's Claude
  * TUI one-by-one as soon as it goes idle (see useHive's flush loop).
  */
-export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
+export function MessageQueueComposer({ agent, variant = 'default' }: MessageQueueComposerProps) {
+  const chat = variant === 'chat';
   const { t } = useTranslation();
   const rtl = useRtl();
   const queue = useStore((s) => s.messageQueues[agent.id]) ?? EMPTY_QUEUE;
@@ -311,7 +319,9 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
   // "@" suggestions — the aliases the composer actually understands. Shown while
   // the caret sits inside an "@word" token that starts the draft or follows
   // whitespace; Up/Down move, Tab/Enter accept, Esc dismisses.
-  const onOfficeFloor = useStore((s) => s.officeTheme) === 'office';
+  const floorTheme = useStore((s) => s.officeTheme);
+  const onOfficeFloor = floorTheme === 'office';
+  const onSchoolFloor = floorTheme === 'staffroom';
   const [caret, setCaret] = useState(0);
   const [mentionIdx, setMentionIdx] = useState(0);
   const [mentionDismissed, setMentionDismissed] = useState<string | null>(null);
@@ -320,7 +330,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
   const mentionStart = mentionMatch ? caret - mentionMatch[2].length - 1 : -1;
   const mentionOptions = mentionQuery === null || mentionDismissed === `${mentionStart}`
     ? []
-    : MENTION_OPTIONS.filter((o) => (!o.officeOnly || onOfficeFloor)
+    : MENTION_OPTIONS.filter((o) => (!o.officeOnly || onOfficeFloor) && (!o.schoolOnly || onSchoolFloor) && (!o.mailmanOnly || agent.character === 'mailman')
         && o.alias.slice(1).startsWith(mentionQuery) && o.alias.slice(1) !== mentionQuery);
   const mentionOpen = mentionOptions.length > 0 && !teachingBusy;
 
@@ -348,6 +358,72 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
   };
 
   const canSend = !!text.trim() || attachments.length > 0;
+  const [routeNote, setRouteNote] = useState<string | null>(null);
+
+  /** Mailman's own chat: `@summarize …` answers in the chat; `@compose <address> <what to say>`
+   *  drafts a mail and opens the editor — nothing is sent until the user confirms there. */
+  const runMailmanDraft = async (draftText: string): Promise<boolean> => {
+    if (agent.character !== 'mailman' || !onOfficeFloor) return false;
+    const m = /^\s*@(summari[sz]e|compose)\b[:,]?\s*([\s\S]*)$/i.exec(draftText);
+    if (!m) return false;
+    const say = (id: string, role: 'user' | 'agent', text: string, pending = false) =>
+      window.dispatchEvent(new CustomEvent('jargon:mailman-chat', { detail: { agentId: agent.id, id, role, text, pending, ts: Date.now() } }));
+    const stamp = Date.now().toString(36);
+    say(`u-${stamp}`, 'user', draftText.trim());
+    setText(draftAfterSend(useStore.getState().drafts[agent.id] ?? '', draftText));
+    const rest = m[2].trim();
+    const replyId = `a-${stamp}`;
+    const off = window.cth.onMailProgress((p) => say(replyId, 'agent', `${p}`, true));
+    try {
+      if (m[1].toLowerCase() === 'compose') {
+        const to = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/.exec(rest)?.[0];
+        const body = rest.replace(to ?? '', '').replace(/^\s*(to|saying|say|that|:|-)\s+/i, '').replace(/\s{2,}/g, ' ').trim();
+        if (!to || !body) {
+          say(replyId, 'agent', '`@compose` needs two things: **who** to send it to (an email address) and **what** to write.\n\nExample: `@compose priya@example.com tell her the report is ready and we can meet Friday`');
+          return true;
+        }
+        say(replyId, 'agent', 'Writing your mail…', true);
+        const res = await window.cth.mailAsk({ request: `${to}\n${body}`, mode: 'compose', selectedUid: null, draft: null });
+        const draft = res.ok ? res.items.find((i) => i.kind === 'draft') : undefined;
+        if (!res.ok || !draft || draft.kind !== 'draft') {
+          const err = !res.ok ? res.error : (res.items.find((i) => i.kind === 'error') as { text?: string } | undefined)?.text ?? 'I could not write that mail.';
+          say(replyId, 'agent', `Sorry — ${err}\n\nType \`@inbox\` to sign in or check your mailbox.`);
+          return true;
+        }
+        say(replyId, 'agent', `Draft ready for **${draft.draft.to}**.\n\n**Subject:** ${draft.draft.subject || '(none)'}\n\n${draft.draft.text}\n\n_Opening the editor — change anything by hand, then confirm to send. Nothing is sent until you do._`);
+        window.dispatchEvent(new CustomEvent('jargon:open-mail', { detail: { request: '', draft: draft.draft } }));
+        return true;
+      }
+      say(replyId, 'agent', 'Reading your mail…', true);
+      const request = rest ? `summarize ${rest}` : 'summarize my unread mail';
+      const res = await window.cth.mailAsk({ request, selectedUid: null, draft: null });
+      if (!res.ok) { say(replyId, 'agent', `Sorry — ${res.error}\n\nType \`@inbox\` to sign in or check your mailbox.`); return true; }
+      const parts = res.items.flatMap((i) => (i.kind === 'text' ? [`**${i.title}**\n\n${i.text}`] : i.kind === 'error' ? [`⚠ ${i.title}: ${i.text}`] : []));
+      const empty = res.items.filter((i) => i.kind === 'list').every((i) => i.kind === 'list' && i.messages.length === 0);
+      say(replyId, 'agent', parts.length ? parts.join('\n\n---\n\n') : empty ? 'Nothing matched — no mail to summarize.' : (res.note || 'There was nothing to summarize.'));
+      return true;
+    } catch (err) {
+      say(replyId, 'agent', `Sorry — ${err instanceof Error ? err.message : String(err)}`);
+      return true;
+    } finally { off(); }
+  };
+
+  /** "tell michael to …", "wake jim", "I need more agents" — handled before the
+   *  message goes to the agent whose chat this is. */
+  const runAddressDraft = async (draftText: string): Promise<boolean> => {
+    const st = useStore.getState();
+    const names = [...st.agents.filter((a) => !a.archived), ...st.archivedAgents].map((a) => a.name);
+    const addr = parseAddress(draftText, names, agent.name);
+    if (!addr) return false;
+    try {
+      setRouteNote(await routeAddress(addr));
+    } catch (err) {
+      setTeachError(err instanceof Error ? err.message : String(err));
+      return true;
+    }
+    setText(draftAfterSend(useStore.getState().drafts[agent.id] ?? '', draftText));
+    return true;
+  };
 
   /** @mail / @email / @mailman / @inbox: the Mailman's desk. Handled at send time
    *  too — typing the whole alias closes the suggestion list, so Enter used to
@@ -377,6 +453,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
   const queueIt = () => {
     if (!canSend || teachingBusyRef.current) return;
     setTeachError(null);
+    setRouteNote(null);
     setFileToolResult(null);
     // Snapshot before any await: the request that launches must be exactly this
     // draft, and only this snapshot is cleared afterwards.
@@ -386,9 +463,12 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
     setTeachingBusy(true);
     void (async () => {
       try {
+        if (await runMailmanDraft(draftText)) return;
         if (runMailDraft(draftText)) return;
-        if (await runFileToolDraft(draftText, draftFiles)) return;
-        const outcome = await sendTeachingDraft(draftText, draftFiles, {
+        if (!draftFiles.length && await runAddressDraft(draftText)) return;
+        // Teaching and the Librarian's file desk belong to the school only.
+        if (onSchoolFloor && await runFileToolDraft(draftText, draftFiles)) return;
+        const outcome = !onSchoolFloor ? { kind: 'ordinary' as const } : await sendTeachingDraft(draftText, draftFiles, {
           agents: agents.filter((a) => !a.archived),
           api: teachingBridge(),
           enqueue: enqueueMessage,
@@ -501,7 +581,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
         }}>{t('queueComposer.dropToAttach')}</span>
       )}
       {/* Header: label, count, status, clear-all */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: chat && queue.length === 0 ? 'none' : 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{
           fontFamily: 'var(--cth-font-display)',
           fontSize: 9, lineHeight: '12px',
@@ -667,6 +747,9 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
           </span>
         )}
         {fileToolResult && <FileToolResultCard result={fileToolResult} />}
+        {routeNote && (
+          <span role="status" style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-ink-500)' }}>{routeNote}</span>
+        )}
         {teachError && (
           <span role="alert" style={{ fontSize: 12, lineHeight: '16px', color: 'var(--cth-coral)' }}>
             {teachError}
@@ -698,6 +781,13 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
             ))}
           </div>
         )}
+        <div style={chat
+          ? { display: 'flex', gap: 8, alignItems: 'flex-end', padding: 8, borderRadius: 16, background: 'var(--cth-paper-100)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)' }
+          : { display: 'contents' }}>
+        {chat && (
+          <button type="button" onClick={pickFiles} title={t('queueComposer.files')} aria-label={t('queueComposer.files')}
+            style={{ border: 'none', cursor: 'pointer', width: 34, height: 34, flexShrink: 0, borderRadius: 10, background: 'var(--cth-cream-200)', color: 'var(--cth-ink-900)', fontSize: 18, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>+</button>
+        )}
         <textarea
           ref={textareaRef}
           dir={rtl ? 'auto' : undefined}
@@ -717,9 +807,16 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
           onClick={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
           onKeyDown={onKey}
           onPaste={onPaste}
-          rows={5}
-          placeholder={idle ? t('queueComposer.messagePlaceholder', { name: agent.name }) : t('queueComposer.busyPlaceholder', { name: agent.name })}
-          style={{
+          rows={chat ? 1 : 5}
+          placeholder={idle
+            ? (chat ? `Message ${agent.name} — type @ for options` : t('queueComposer.messagePlaceholder', { name: agent.name }))
+            : t('queueComposer.busyPlaceholder', { name: agent.name })}
+          style={chat ? {
+            flex: 1, minWidth: 0, resize: 'none', border: 'none', outline: 'none', background: 'transparent',
+            color: 'var(--cth-ink-900)', fontFamily: 'var(--cth-font-ui)', fontSize: 14, lineHeight: '20px',
+            padding: '7px 2px', boxSizing: 'border-box', minHeight: 34, maxHeight: 160, overflowY: 'auto', display: 'block',
+            boxShadow: 'none', fieldSizing: 'content'
+          } as React.CSSProperties : {
             width: '100%',
             resize: 'vertical',
             // Track the terminal's zoom (Cmd +/- or the terminal's own zoom
@@ -741,10 +838,18 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
             boxSizing: 'border-box'
           }}
         />
+        {chat && (
+          <>
+            {freeflowEnabled && <FreeFlowButton agentId={agent.id} hasGroqKey={hasGroqKey} compact />}
+            <button type="button" onClick={queueIt} disabled={!canSend || teachingBusy} aria-label={t('commandBar.send')}
+              style={{ border: 'none', cursor: !canSend || teachingBusy ? 'default' : 'pointer', width: 34, height: 34, flexShrink: 0, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10, background: !canSend || teachingBusy ? 'var(--cth-cream-300)' : 'var(--cth-ink-900)', color: !canSend || teachingBusy ? 'var(--cth-ink-500)' : 'var(--cth-paper-100)', fontSize: 16, lineHeight: 1 }}>↑</button>
+          </>
+        )}
+        </div>
         {/* Control bar: Attach + voice + Send aligned right. flexWrap so a
             narrow sidebar wraps the buttons onto a second row instead of
             pushing Send off-screen. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, rowGap: 6, flexWrap: 'wrap', minWidth: 0 }}>
+        {!chat && <div style={{ display: 'flex', alignItems: 'center', gap: 6, rowGap: 6, flexWrap: 'wrap', minWidth: 0 }}>
           <span style={{ flex: 1 }} />
           <PixelButton variant="secondary" size="sm" onClick={pickFiles}>
             <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
@@ -757,7 +862,7 @@ export function MessageQueueComposer({ agent }: MessageQueueComposerProps) {
               {t('commandBar.send')} <Icon name="arrow-right" />
             </span>
           </PixelButton>
-        </div>
+        </div>}
       </div>
       {providerInfoOpen && (
         <TeachingAccessDialog onClose={closeProviderInfo} />
@@ -929,7 +1034,7 @@ function QueuedMessageRow(
  * the Groq STT call are never reached (preserving the zero-call-when-unavailable
  * guarantee). `hasGroqKey` is boolean presence only; the key value never gets here.
  */
-function FreeFlowButton({ agentId, hasGroqKey }: { agentId: string; hasGroqKey: boolean }) {
+function FreeFlowButton({ agentId, hasGroqKey, compact = false }: { agentId: string; hasGroqKey: boolean; compact?: boolean }) {
   const { t } = useTranslation();
   const ff = useFreeflow();
   const mine = ff.targetAgentId === agentId;
@@ -1003,7 +1108,16 @@ function FreeFlowButton({ agentId, hasGroqKey }: { agentId: string; hasGroqKey: 
           even when the inner button is disabled — Chromium suppresses tooltips on
           a disabled <button> itself. */}
       <span title={title} style={{ display: 'inline-flex' }}>
-        <PixelButton
+        {compact ? (
+          <button type="button" aria-label={title}
+            onClick={() => { if (noKey) return; freeflowRecorder.toggle(agentId); }}
+            disabled={noKey || transcribing || busyElsewhere}
+            style={{ border: 'none', width: 34, height: 34, flexShrink: 0, padding: 0, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: noKey || transcribing || busyElsewhere ? 'default' : 'pointer', opacity: noKey || busyElsewhere ? 0.5 : 1,
+              background: recording ? 'var(--cth-coral)' : 'var(--cth-cream-200)', color: 'var(--cth-ink-900)' }}>
+            {transcribing ? '…' : <Icon name="mic" />}
+          </button>
+        ) : <PixelButton
           variant={recording ? 'destructive' : 'secondary'}
           size="sm"
           onClick={() => { if (noKey) return; freeflowRecorder.toggle(agentId); }}
@@ -1013,7 +1127,7 @@ function FreeFlowButton({ agentId, hasGroqKey }: { agentId: string; hasGroqKey: 
             <Icon name="mic" />
             {transcribing ? '…' : recording ? t('queueComposer.stop') : t('queueComposer.voice')}
           </span>
-        </PixelButton>
+        </PixelButton>}
       </span>
 
       {/* A missing key is a SETUP STATE, not a failure — the same treatment Talk

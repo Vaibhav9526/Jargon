@@ -11,6 +11,7 @@ import {
   type MailAccount, type MailAiAction, type MailSecrets,
 } from './mail';
 import { runMailRequest } from './mailPlanner';
+import { gmailStatus, googleMailLogin, signInGmail, signOutGmail } from './gmailAuth';
 import type { MailProviderId } from '../shared/mailAsk';
 
 const secrets: MailSecrets = {
@@ -24,6 +25,22 @@ const AI_ACTIONS: readonly MailAiAction[] = ['summarize', 'extract', 'rewrite', 
 function onOfficeFloor(): boolean {
   const cfg = readConfig();
   return (cfg.tvShowOffices ? (cfg.officeTheme ?? 'office') : 'office') === 'office';
+}
+
+/** The mailbox in use: the Google sign-in from Settings → Connections wins
+ *  (OAuth access token over IMAP/SMTP XOAUTH2); otherwise the app-password account. */
+async function resolveAccount(): Promise<MailAccount | null> {
+  try {
+    const g = await googleMailLogin();
+    if (g) {
+      return {
+        user: g.user, pass: g.accessToken, oauth: true,
+        imapHost: 'imap.gmail.com', imapPort: 993, imapSecure: true,
+        smtpHost: 'smtp.gmail.com', smtpPort: 465, smtpSecure: true,
+      };
+    }
+  } catch { /* refresh failed — fall back to a saved app-password account */ }
+  return loadAccount(secrets);
 }
 
 const NOT_OFFICE = {
@@ -44,7 +61,7 @@ export function registerMailIpc(ipcMain: Pick<IpcMain, 'handle'>): void {
   const guarded = <T>(fn: (account: MailAccount, payload: Record<string, unknown>, e: IpcMainInvokeEvent) => Promise<T>) =>
     async (e: IpcMainInvokeEvent, payload: unknown) => {
       if (!onOfficeFloor()) return NOT_OFFICE;
-      const account = loadAccount(secrets);
+      const account = await resolveAccount();
       if (!account) return NOT_SET_UP;
       try {
         return await fn(account, (payload ?? {}) as Record<string, unknown>, e);
@@ -53,7 +70,17 @@ export function registerMailIpc(ipcMain: Pick<IpcMain, 'handle'>): void {
       }
     };
 
-  ipcMain.handle('mail:status', () => ({ ...publicStatus(loadAccount(secrets)), office: onOfficeFloor() }));
+  ipcMain.handle('mail:status', async () => ({
+    ...publicStatus(await resolveAccount()),
+    office: onOfficeFloor(),
+    googleClient: gmailStatus().hasClient,
+  }));
+
+  // One-click Google sign-in (client id/secret come from Settings → Connections).
+  ipcMain.handle('mail:googleSignIn', async () => {
+    if (!onOfficeFloor()) return NOT_OFFICE;
+    return signInGmail();
+  });
 
   // Provider auto-detection for the sign-in screen (domain, then MX records).
   ipcMain.handle('mail:preset', async (_e, email: unknown) =>
@@ -91,7 +118,7 @@ export function registerMailIpc(ipcMain: Pick<IpcMain, 'handle'>): void {
       : { ok: false as const, error: saved.error ?? 'Could not store the password securely on this device.' };
   });
 
-  ipcMain.handle('mail:disconnect', () => { clearAccount(secrets); return { ok: true as const }; });
+  ipcMain.handle('mail:disconnect', () => { clearAccount(secrets); signOutGmail(); return { ok: true as const }; });
 
   ipcMain.handle('mail:list', guarded(async (a, p) => ({
     ok: true as const,
@@ -149,6 +176,7 @@ export function registerMailIpc(ipcMain: Pick<IpcMain, 'handle'>): void {
       progress: progressTo(e),
     }, {
       request: typeof p.request === 'string' ? p.request : '',
+      mode: p.mode === 'compose' ? 'compose' : undefined,
       selectedUid: typeof p.selectedUid === 'number' ? p.selectedUid : null,
       draft: draft ? {
         to: typeof draft.to === 'string' ? draft.to : '', cc: typeof draft.cc === 'string' ? draft.cc : '',

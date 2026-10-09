@@ -43,8 +43,8 @@ export type Target =
   | { kind: 'results' };   // every result of the latest list/search (digest)
 
 export type PlanStep =
-  | { op: 'list'; unreadOnly: boolean; limit: number }
-  | { op: 'search'; query: string; unreadOnly: boolean; limit: number }
+  | { op: 'list'; unreadOnly: boolean; limit: number; sinceDays?: number }
+  | { op: 'search'; query: string; unreadOnly: boolean; limit: number; sinceDays?: number }
   | { op: 'read'; target: Target }
   | { op: 'summarize'; target: Target }
   | { op: 'extract'; target: Target }
@@ -88,6 +88,25 @@ const clampInt = (v: unknown, lo: number, hi: number, dflt: number) => {
   return Number.isFinite(n) ? Math.min(hi, Math.max(lo, Math.trunc(n))) : dflt;
 };
 const oneLine = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max) : '');
+
+/** `sinceDays`: 0 = since this morning (today), 1 = since yesterday, … up to a year. */
+function sinceOf(v: unknown): { sinceDays?: number } {
+  if (v === undefined || v === null || v === '') return {};
+  const n = typeof v === 'number' ? v : Number.parseInt(String(v), 10);
+  return Number.isFinite(n) ? { sinceDays: Math.min(365, Math.max(0, Math.trunc(n))) } : {};
+}
+
+/** "today", "yesterday", "this week", "last 3 days" in a request → sinceDays. */
+export function sinceFromText(request: string): number | undefined {
+  const r = request.toLowerCase();
+  if (/\b(today|todays|today's|this morning|tonight)\b/.test(r)) return 0;
+  if (/\byesterday\b/.test(r)) return 1;
+  const n = /\b(?:last|past|previous)\s+(\d{1,3})\s+days?\b/.exec(r);
+  if (n) return Math.min(365, Number(n[1]));
+  if (/\b(this|last|past) week\b/.test(r)) return 7;
+  if (/\b(this|last|past) month\b/.test(r)) return 30;
+  return undefined;
+}
 
 function parseTarget(v: unknown, allowResults: boolean): Target | null {
   if (v === undefined || v === null || v === '') return null;
@@ -136,12 +155,12 @@ export function validatePlan(raw: unknown, ctx: PlanContext): ValidPlan | { ok: 
     if (CONTENT_OPS.has(op) && content >= MAX_CONTENT_STEPS) { dropped.push(`${op}: too many writing steps`); continue; }
     switch (op) {
       case 'list':
-        steps.push({ op, unreadOnly: s.unreadOnly === true, limit: clampInt(s.limit, 1, 25, 15) });
+        steps.push({ op, unreadOnly: s.unreadOnly === true, limit: clampInt(s.limit, 1, 25, 15), ...sinceOf(s.sinceDays) });
         break;
       case 'search': {
         const query = oneLine(s.query, 100);
         if (!query) { dropped.push('search: empty query'); break; }
-        steps.push({ op, query, unreadOnly: s.unreadOnly === true, limit: clampInt(s.limit, 1, 25, 15) });
+        steps.push({ op, query, unreadOnly: s.unreadOnly === true, limit: clampInt(s.limit, 1, 25, 15), ...sinceOf(s.sinceDays) });
         break;
       }
       case 'read': {
@@ -202,13 +221,15 @@ export function fallbackPlan(request: string, ctx: PlanContext): PlanStep[] {
   }
 
   const steps: PlanStep[] = [];
+  const sinceDays = sinceFromText(request);
+  const since = sinceDays === undefined ? {} : { sinceDays };
   const from = /\bfrom\s+["“]?([^\s"”,;!?]{2,60})/i.exec(request)?.[1]?.replace(/[.:]+$/, '');
   const about = /\b(?:about|regarding|mentioning|re)\s*:?\s+["“]?([^"”\n,;!?]{2,60})/i.exec(request)?.[1]?.trim().replace(/[.:]+$/, '');
   const query = (about || from || '').replace(/^(my|the|an?)\s+/i, '');
   let found = false;
-  if (query) { steps.push({ op: 'search', query, unreadOnly: wantsUnread, limit: 15 }); found = true; }
-  else if (wantsUnread || (!ctx.selectedUid && (wantsSummary || wantsExtract || !wantsReply))) {
-    steps.push({ op: 'list', unreadOnly: wantsUnread, limit: 15 }); found = true;
+  if (query) { steps.push({ op: 'search', query, unreadOnly: wantsUnread, limit: 15, ...since }); found = true; }
+  else if (wantsUnread || sinceDays !== undefined || (!ctx.selectedUid && (wantsSummary || wantsExtract || !wantsReply))) {
+    steps.push({ op: 'list', unreadOnly: wantsUnread, limit: 15, ...since }); found = true;
   }
   const one: Target = found ? { kind: 'first' } : ctx.selectedUid ? { kind: 'selected' } : { kind: 'first' };
   const many: Target = found ? { kind: 'results' } : ctx.selectedUid ? { kind: 'selected' } : { kind: 'results' };
@@ -233,8 +254,9 @@ export function buildPlannerPrompt(request: string, recent: MailSummary[], ctx: 
   return [
     "You are the planner for the Mailman, a mail assistant inside a desktop app. Turn the USER REQUEST into a plan.",
     'Allowed steps — use ONLY these exact shapes:',
-    '{"op":"list","unreadOnly":true|false,"limit":1-25}',
-    '{"op":"search","query":"words, a name or an address","unreadOnly":true|false,"limit":1-25}',
+    '{"op":"list","unreadOnly":true|false,"limit":1-25,"sinceDays":0-365 (optional)}',
+    '{"op":"search","query":"words, a name or an address","unreadOnly":true|false,"limit":1-25,"sinceDays":0-365 (optional)}',
+    'sinceDays limits to mail received since that many days ago: 0 = today, 1 = since yesterday, 7 = this week. Use it whenever the user names a time ("sent today", "this week"). Today is ' + new Date().toDateString() + '.',
     '{"op":"read","uid":<uid>|"selected"|"first"}',
     '{"op":"summarize","uid":<uid>|"selected"|"first"|"results"}',
     '{"op":"extract","uid":<uid>|"selected"|"first"|"results"}   (action items, dates, deadlines, amounts)',
@@ -274,6 +296,7 @@ export function buildComposePrompt(step: { to: string[]; subject: string; tone: 
     'You write emails for the user. Write the email the user asks for below.',
     `Tone: ${step.tone}. To: ${step.to.join(', ') || '(not given)'}.`,
     step.subject ? `Subject: ${step.subject}` : 'Start with a line "Subject: <a short subject>", then a blank line, then the body.',
+    'Make it a complete, ready-to-send mail: a greeting, a clear well-phrased body that expresses what the user wants (rephrase their rough words properly), and a closing with a sign-off.',
     'Return only the email (no preamble, no notes). Do not invent facts, names or numbers the user did not give; leave a [placeholder] instead.',
     '',
     `<request>\n${neutralizeFences(request)}\n</request>`,
@@ -307,8 +330,12 @@ export function stepLabel(s: PlanStep): string {
 
 // ─── executor ───────────────────────────────────────────────────────────────
 
+function sinceLabel(d?: number): string {
+  return d === undefined ? '' : d === 0 ? ' from today' : d === 1 ? ' since yesterday' : ` from the last ${d} days`;
+}
+
 export interface MailOps {
-  list(o: { limit: number; unseenOnly: boolean; query?: string }): Promise<MailSummary[]>;
+  list(o: { limit: number; unseenOnly: boolean; query?: string; sinceDays?: number }): Promise<MailSummary[]>;
   readMany(uids: number[]): Promise<MailMessage[]>;
   ai(prompt: string, timeoutMs: number): Promise<{ ok: true; text: string } | { ok: false; error: string }>;
   progress?(phase: string): void;
@@ -350,10 +377,12 @@ export async function runMailRequest(ops: MailOps, input: MailAskInput, budgetMs
   const ctx: PlanContext = { selectedUid, hasDraft: !!draftText.trim() };
 
   // (a) minimal context: recent headers only.
-  progress('Looking at your inbox…');
-  let recent: MailSummary[];
+  // `compose` mode (the Mailman chat's @compose) needs no inbox context and no planner.
+  const composeOnly = input.mode === 'compose';
+  if (!composeOnly) progress('Looking at your inbox…');
+  let recent: MailSummary[] = [];
   try {
-    recent = await ops.list({ limit: CONTEXT_LIST, unseenOnly: false });
+    if (!composeOnly) recent = await ops.list({ limit: CONTEXT_LIST, unseenOnly: false });
   } catch (e) {
     return { ok: false, error: friendlyMailError(e) };
   }
@@ -364,11 +393,15 @@ export async function runMailRequest(ops: MailOps, input: MailAskInput, budgetMs
   progress('Planning…');
   const warnings: string[] = [];
   let steps: PlanStep[]; let note = ''; let usedFallback = false;
-  const planned = await ops.ai(buildPlannerPrompt(request, recent, {
+  const planned = composeOnly ? { ok: true as const, text: '' } : await ops.ai(buildPlannerPrompt(request, recent, {
     ...ctx, selectedSubject: recent.find((m) => m.uid === selectedUid)?.subject,
   }), Math.min(90_000, Math.max(5_000, deadline - now() - 30_000)));
-  const valid = planned.ok ? validatePlan(parsePlanText(planned.text), ctx) : null;
-  if (valid && valid.ok) {
+  const valid = composeOnly ? null : planned.ok ? validatePlan(parsePlanText(planned.text), ctx) : null;
+  if (composeOnly) {
+    const r = cleanRecipients(request.match(EMAIL_IN_TEXT) ?? []);
+    const tone = (TONE_WORDS.exec(request)?.[1] ?? 'professional').toLowerCase();
+    steps = [{ op: 'compose', to: r.ok ? r.to : [], subject: '', tone }];
+  } else if (valid && valid.ok) {
     steps = valid.steps; note = valid.note;
     if (valid.dropped.length) warnings.push(...valid.dropped.map((d) => `Skipped ${d}.`));
   } else {
@@ -407,9 +440,9 @@ export async function runMailRequest(ops: MailOps, input: MailAskInput, budgetMs
       switch (step.op) {
         case 'list': case 'search': {
           progress(step.op === 'list' ? 'Fetching mail…' : `Searching for "${step.query}"…`);
-          const msgs = await ops.list({ limit: step.limit, unseenOnly: step.unreadOnly, query: step.op === 'search' ? step.query : undefined });
+          const msgs = await ops.list({ limit: step.limit, unseenOnly: step.unreadOnly, query: step.op === 'search' ? step.query : undefined, sinceDays: step.sinceDays });
           current = msgs; msgs.forEach((m) => known.add(m.uid));
-          items.push({ kind: 'list', title: step.op === 'list' ? (step.unreadOnly ? 'Unread mail' : 'Recent mail') : `Mail matching "${step.query}"`, messages: msgs });
+          items.push({ kind: 'list', title: step.op === 'list' ? `${step.unreadOnly ? 'Unread mail' : 'Recent mail'}${sinceLabel(step.sinceDays)}` : `Mail matching "${step.query}"`, messages: msgs });
           break;
         }
         case 'read': {

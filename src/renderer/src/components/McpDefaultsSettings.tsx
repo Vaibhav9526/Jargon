@@ -70,7 +70,7 @@ export function McpDefaultsSettings({ config }: McpDefaultsSettingsProps) {
     }
   };
   // Gmail sign-in (OAuth through the system browser). The user brings their own
-  // Google "Desktop app" client; tokens live in ~/.gmail-mcp, never in Jargon.
+  // Google "Desktop app" client; tokens live in ~/.gmail-mcp and serve both agents and the Mail panel.
   const [gmail, setGmail] = useState<{ hasClient: boolean; signedIn: boolean }>({ hasClient: false, signedIn: false });
   const [gClientId, setGClientId] = useState('');
   const [gSecret, setGSecret] = useState('');
@@ -215,7 +215,7 @@ export function McpDefaultsSettings({ config }: McpDefaultsSettingsProps) {
                           {!gmail.hasClient && (
                             <span style={{ fontSize: 11, lineHeight: '15px', color: 'var(--cth-ink-500)' }}>
                               One-time setup: in Google Cloud Console enable the Gmail API, create an OAuth client of type
-                              &quot;Desktop app&quot;, and paste its client ID and secret here. Jargon never stores your Google password or tokens.
+                              &quot;Desktop app&quot;, and paste its client ID and secret here. Your Google password is never seen by Jargon; the sign-in also unlocks the Mail panel on the Office floor.
                             </span>
                           )}
                           {!gmail.hasClient && (

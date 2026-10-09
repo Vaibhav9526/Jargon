@@ -24,6 +24,7 @@ import {
   symlinkSync, unlinkSync, copyFileSync, cpSync, chmodSync
 } from 'node:fs';
 import { join, dirname, basename, isAbsolute, relative } from 'node:path';
+import { readTextFile } from './textFile';
 import { homedir } from 'node:os';
 import { spawnSync, spawn, type ChildProcess } from 'node:child_process';
 import { randomBytes, createHash } from 'node:crypto';
@@ -1097,7 +1098,7 @@ export class HiveManager {
     for (const f of files) {
       const fp = join(inbox, f);
       let msg: Partial<HiveMessage> = {};
-      try { msg = JSON.parse(readFileSync(fp, 'utf8')) as Partial<HiveMessage>; } catch { /* half-written: file it by mtime */ }
+      try { msg = JSON.parse(readTextFile(fp)) as Partial<HiveMessage>; } catch { /* half-written: file it by mtime */ }
       let at = Date.parse(msg.created_at ?? '');
       if (!Number.isFinite(at)) { try { at = statSync(fp).mtimeMs; } catch { at = 0; } }
       if (at > before) { out.kept++; continue; }
@@ -1866,7 +1867,7 @@ export class HiveManager {
         if (!f.endsWith('.json')) continue;
         const full = join(outbox, f);
         try {
-          const raw = readFileSync(full, 'utf8');
+          const raw = readTextFile(full);
           let partial: Partial<HiveMessage>;
           try {
             partial = JSON.parse(raw) as Partial<HiveMessage>;
@@ -2686,7 +2687,7 @@ export class HiveManager {
     return readdirSync(dir)
       .filter((f) => f.endsWith('.json'))
       .sort()
-      .map((f) => { try { return JSON.parse(readFileSync(join(dir, f), 'utf8')) as HiveMessage; } catch { return null; } })
+      .map((f) => { try { return JSON.parse(readTextFile(join(dir, f))) as HiveMessage; } catch { return null; } })
       .filter((m): m is HiveMessage => m !== null);
   }
 
@@ -2806,7 +2807,7 @@ export class HiveManager {
 
   // — json + atomic io —
   private readJson<T>(p: string, fallback: T): T {
-    try { return JSON.parse(readFileSync(p, 'utf8')) as T; } catch { return fallback; }
+    try { return JSON.parse(readTextFile(p)) as T; } catch { return fallback; }
   }
   private writeJson(p: string, data: unknown): void {
     writeFileSync(p, JSON.stringify(data, null, 2), 'utf8');

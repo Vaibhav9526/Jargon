@@ -5,6 +5,7 @@ import {
   unlinkSync, mkdirSync, renameSync, createWriteStream, copyFileSync, lstatSync,
   readlinkSync, symlinkSync
 } from 'node:fs';
+import { readTextFile } from './textFile';
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { join, resolve, sep, basename, dirname, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
@@ -4824,7 +4825,7 @@ function workerDoneAt(workerId: string, spawnedAt: number): number | null {
 async function processSpawnRequest(filePath: string): Promise<void> {
   let raw: SpawnRequest;
   try {
-    raw = JSON.parse(readFileSync(filePath, 'utf8')) as SpawnRequest;
+    raw = JSON.parse(readTextFile(filePath)) as SpawnRequest;
   } catch (e) {
     console.error('[worker] unparseable spawn-request:', filePath, e);
     informGod('[worker spawn rejected] unparseable request', `Could not parse spawn-request ${basename(filePath)} — ${String(e)}`);

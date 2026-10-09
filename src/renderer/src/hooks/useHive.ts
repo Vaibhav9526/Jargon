@@ -22,7 +22,8 @@ import { inboxNudgeText } from '../../../shared/hiveNudge';
 import { resolveGodName, officeGodIdentity, godIdentityStorageKey, createIdentityRenameQueue, type OfficeGodIdentity } from '../../../shared/godIdentity';
 import { acquireTerminal, resetTerminal, isTerminalAutomationSafe } from '@/components/terminalPool';
 import { canDeliverToAgent, deliverWithAcknowledgement, checkPrecondition } from './queueDelivery';
-import { OFFICE_CAST, CAST_BY_NAME, defaultCharacterForTheme, type OfficeCharacterName } from '@/scene/office/cast';
+import { OFFICE_CAST, CAST_BY_NAME, castForTheme, defaultCharacterForTheme, type OfficeCharacterName } from '@/scene/office/cast';
+import { quickHire } from '@/components/classroom/quickHire';
 
 const GOD_ID = 'god';
 /** Accent palette for MAIN-spawned (voice-hired) agents — picked deterministically
@@ -778,6 +779,41 @@ export function useHive(config: HarnessConfig | null): void {
     }, 4000);
     return () => clearInterval(iv);
   }, [config?.onboardingComplete]);
+
+  // 3a) AUTO-WAKE: mail filed for a sleeping (archived) agent used to just sit
+  //     there — the router bounces a "no one is there" note to the sender and the
+  //     work stalls. When a sleeper's inbox holds a message we have not acted on,
+  //     wake it as itself (same id → memory and history survive); the nudge loop
+  //     above then tells it to read the mail. Once per message id; the god's own
+  //     room is never touched, and only this floor's cast is woken.
+  useEffect(() => {
+    if (!config?.onboardingComplete) return;
+    const woken = new Set<string>();
+    let busy = false;
+    const iv = setInterval(async () => {
+      if (busy) return;
+      const st = useStore.getState();
+      const floorNames = new Set(castForTheme(st.officeTheme).map((m) => m.name as string));
+      const sleepers = st.archivedAgents.filter((a) => !a.isGod && floorNames.has(a.character));
+      if (!sleepers.length) return;
+      busy = true;
+      try {
+        for (const a of sleepers) {
+          const inbox = await window.cth.hiveInbox(a.id).catch(() => []);
+          const fresh = inbox.filter((m) => m.id && !woken.has(`${a.id}:${m.id}`));
+          if (!fresh.length) continue;
+          fresh.forEach((m) => woken.add(`${a.id}:${m.id}`));
+          try {
+            await quickHire(a.character, config);
+          } catch {
+            // Could not wake (no project folder, spawn failed): allow a retry later.
+            fresh.forEach((m) => woken.delete(`${a.id}:${m.id}`));
+          }
+        }
+      } finally { busy = false; }
+    }, 6000);
+    return () => clearInterval(iv);
+  }, [config]);
 
   // 3b) Seed a fresh "type-into-tui" worker (Crush) with the hive protocol. Its
   //     bare TUI rejects a positional seed (Cobra reads it as a subcommand →

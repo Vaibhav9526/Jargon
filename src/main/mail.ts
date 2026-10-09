@@ -34,6 +34,8 @@ export interface MailAccount {
   smtpHost: string;
   smtpPort: number;
   smtpSecure: boolean;
+  /** `pass` is a short-lived Google OAuth access token (XOAUTH2), not a password. */
+  oauth?: boolean;
 }
 
 export interface MailSummary {
@@ -77,7 +79,7 @@ export interface MailSecrets {
 
 const SECRET_REF = 'mail:account';
 const MAX_TEXT_CHARS = 100_000;
-const MAX_LIST = 100;
+const MAX_LIST = 1000;
 export const MAX_RECIPIENTS = 50;
 export const MAX_BODY_CHARS = 200_000;
 export const MAX_SUBJECT_CHARS = 500;
@@ -369,7 +371,7 @@ function imapClient(a: MailAccount): ImapFlow {
     secure: a.imapSecure,
     // Never send the password over a plaintext connection.
     doSTARTTLS: a.imapSecure ? undefined : true,
-    auth: { user: a.user, pass: a.pass },
+    auth: a.oauth ? { user: a.user, accessToken: a.pass } : { user: a.user, pass: a.pass },
     logger: false,
     disableAutoIdle: true,
     connectionTimeout: CONNECT_TIMEOUT_MS,
@@ -384,7 +386,7 @@ function smtpTransport(a: MailAccount) {
     port: a.smtpPort,
     secure: a.smtpSecure,
     requireTLS: !a.smtpSecure, // STARTTLS is mandatory on 587 — never plaintext auth
-    auth: { user: a.user, pass: a.pass },
+    auth: a.oauth ? { type: 'OAuth2', user: a.user, accessToken: a.pass } : { user: a.user, pass: a.pass },
     connectionTimeout: 20_000,
     greetingTimeout: 15_000,
     socketTimeout: 45_000,
@@ -459,15 +461,18 @@ export function addressOf(from: string): string | null {
 
 export async function listMessages(
   a: MailAccount,
-  opts: { limit?: number; unseenOnly?: boolean; query?: string } = {},
+  opts: { limit?: number; unseenOnly?: boolean; query?: string; sinceDays?: number } = {},
 ): Promise<MailSummary[]> {
   const limit = Math.min(Math.max(Math.trunc(opts.limit ?? 30) || 30, 1), MAX_LIST);
   const query = (opts.query ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 200);
   return withInbox(a, async (c) => {
-    const base = opts.unseenOnly ? { seen: false } : {};
+    const sinceDays = Number.isFinite(opts.sinceDays) ? Math.min(365, Math.max(0, Math.trunc(opts.sinceDays as number))) : undefined;
+    let since: Date | undefined;
+    if (sinceDays !== undefined) { since = new Date(); since.setHours(0, 0, 0, 0); since.setDate(since.getDate() - sinceDays); }
+    const base = { ...(opts.unseenOnly ? { seen: false } : {}), ...(since ? { since } : {}) };
     const criteria = query
       ? { ...base, or: [{ subject: query }, { from: query }, { body: query }] }
-      : opts.unseenOnly ? base : { all: true };
+      : Object.keys(base).length ? base : { all: true };
     const found = ((await c.search(criteria, { uid: true })) || []) as number[];
     const uids = found.sort((x, y) => y - x).slice(0, limit);
     if (!uids.length) return [];

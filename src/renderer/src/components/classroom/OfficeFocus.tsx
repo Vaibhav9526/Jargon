@@ -13,7 +13,24 @@ import { IconUser } from './icons';
 import { AgentPickerDialog, AgentContextMenu, AgentDeskStyles, ago, type AgentMenuState } from './AgentDesk';
 import brandLogo from '@brand/logo.png?url';
 
-interface Line { id: string; role: 'user' | 'agent'; text: string; ts: number }
+interface Line { id: string; role: 'user' | 'agent' | 'note'; text: string; ts: number; detail?: string; pending?: boolean }
+
+const MAILMAN_STARTERS = ['@summarize unread mail from today', '@compose name@example.com ', '@inbox'];
+const STARTERS = ['What are you working on right now?', 'Summarize where this project stands', 'Review my latest changes'];
+const clearedKey = (id: string) => `jargon:officeChatCleared:${id}`;
+function readCleared(id: string): number {
+  try { return Number(localStorage.getItem(clearedKey(id))) || 0; } catch { return 0; }
+}
+
+/** Put text in the composer's box (it keeps its draft in the store, so go through the DOM value setter). */
+function fillComposer(host: HTMLElement | null, text: string) {
+  const ta = host?.querySelector<HTMLTextAreaElement>('textarea.cth-input');
+  if (!ta) return;
+  Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(ta, text);
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+  ta.focus({ preventScroll: true });
+  ta.setSelectionRange(text.length, text.length);
+}
 
 const OFFICE_CHARACTERS = castForTheme('office').map((m) => m.name);
 const PREVIEW_EVERY_MS = 8000;
@@ -34,6 +51,10 @@ export function OfficeFocus({ config }: { config?: HarnessConfig | null }) {
   const [q, setQ] = useState('');
   const [previews, setPreviews] = useState<Record<string, Line>>({});
   const [lines, setLines] = useState<Line[]>([]);
+  const [clearedAt, setClearedAt] = useState(0);
+  const [hiveLines, setHiveLines] = useState<Line[]>([]);
+  /** Answers produced by the app itself (Mailman's @summarize / @compose) — not in any transcript. */
+  const [localByAgent, setLocalByAgent] = useState<Record<string, Line[]>>({});
   const [picking, setPicking] = useState(false);
   const [waking, setWaking] = useState<string | null>(null);
   const [deskError, setDeskError] = useState<string | null>(null);
@@ -74,6 +95,7 @@ export function OfficeFocus({ config }: { config?: HarnessConfig | null }) {
     let live = true;
     stick.current = true;
     setLines([]);
+    setClearedAt(readCleared(agent.id));
     const load = () => {
       void window.cth.officeChatMessages(agent.id, 300).then((r) => { if (live) setLines(r.lines); }).catch(() => undefined);
     };
@@ -81,6 +103,50 @@ export function OfficeFocus({ config }: { config?: HarnessConfig | null }) {
     const t = setInterval(load, OPEN_CHAT_EVERY_MS);
     return () => { live = false; clearInterval(t); };
   }, [agent?.id]);
+
+  // Messages between agents (task hand-offs, questions, replies) that touch this
+  // agent — so delegation is visible here, whatever CLI the agent runs.
+  useEffect(() => {
+    if (!agent) return;
+    let live = true;
+    setHiveLines([]);
+    const nameOf = (id: string) => {
+      if (id === 'human') return 'You';
+      const a = useStore.getState().agents.find((x) => x.id === id) ?? useStore.getState().archivedAgents.find((x) => x.id === id)
+        ?? (id === 'god' ? useStore.getState().agents.find((x) => x.isGod) : undefined);
+      return a?.name ?? id;
+    };
+    const load = () => {
+      void window.cth.hiveMessages({ agentId: agent.id, limit: 40, includeArchived: true }).then((ms) => {
+        if (!live) return;
+        setHiveLines(ms.map((m) => ({
+          id: `hive-${m.id}`, role: 'note' as const, ts: Date.parse(m.created_at) || 0,
+          text: `${nameOf(m.from)} → ${nameOf(m.to)} · ${m.act}: ${m.subject}`,
+          detail: m.body,
+        })));
+      }).catch(() => undefined);
+    };
+    load();
+    const t = setInterval(load, OPEN_CHAT_EVERY_MS * 2);
+    return () => { live = false; clearInterval(t); };
+  }, [agent?.id]);
+
+  useEffect(() => {
+    const onSay = (e: Event) => {
+      const d = (e as CustomEvent<{ agentId: string; id: string; role: 'user' | 'agent'; text: string; pending?: boolean; ts: number }>).detail;
+      if (!d?.agentId) return;
+      setLocalByAgent((prev) => {
+        const list = prev[d.agentId] ?? [];
+        const line: Line = { id: `local-${d.id}`, role: d.role, text: d.text, ts: d.ts, pending: d.pending };
+        const at = list.findIndex((l) => l.id === line.id);
+        const next = at >= 0 ? list.map((l, i) => (i === at ? { ...line, ts: l.ts } : l)) : [...list, line];
+        return { ...prev, [d.agentId]: next };
+      });
+      stick.current = true;
+    };
+    window.addEventListener('jargon:mailman-chat', onSay);
+    return () => window.removeEventListener('jargon:mailman-chat', onSay);
+  }, []);
 
   // Opening (or switching to) a chat puts the cursor in its message box.
   useEffect(() => {
@@ -92,7 +158,7 @@ export function OfficeFocus({ config }: { config?: HarnessConfig | null }) {
   useEffect(() => {
     const el = scroller.current;
     if (el && stick.current) el.scrollTop = el.scrollHeight;
-  }, [lines, agent?.status]);
+  }, [lines, hiveLines, localByAgent, agent?.status]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -151,11 +217,15 @@ export function OfficeFocus({ config }: { config?: HarnessConfig | null }) {
   if (!agent) return null;
 
   const needle = q.trim().toLowerCase();
+  // Every open agent has a row (an agent whose CLI keeps no transcript — or that has not
+  // spoken yet — still needs to be reachable); sleepers only show once they have said something.
   const rows = pool
-    .filter((a) => previews[a.id] && (a.name.toLowerCase().includes(needle) || previews[a.id].text.toLowerCase().includes(needle)))
-    .sort((x, y) => previews[y.id].ts - previews[x.id].ts);
+    .filter((a) => (previews[a.id] || !sleepingIds.has(a.id))
+      && (a.name.toLowerCase().includes(needle) || (previews[a.id]?.text ?? '').toLowerCase().includes(needle)))
+    .sort((x, y) => (previews[y.id]?.ts ?? 0) - (previews[x.id]?.ts ?? 0));
   // The open agent always has a row, even before its first message.
   if (!rows.some((a) => a.id === agent.id) && !needle) rows.unshift(agent);
+  const visible = [...lines, ...hiveLines, ...(localByAgent[agent.id] ?? [])].filter((l) => l.ts > clearedAt).sort((x, y) => x.ts - y.ts);
   const working = agent.status === 'working' || agent.status === 'thinking';
 
   return (
@@ -221,20 +291,43 @@ export function OfficeFocus({ config }: { config?: HarnessConfig | null }) {
               </div>
             </div>
             <span style={{ flex: 1 }} />
+            <button type="button" onClick={() => {
+              const now = Date.now();
+              try { localStorage.setItem(clearedKey(agent.id), String(now)); } catch { /* private window */ }
+              setClearedAt(now);
+            }} title="Hide the messages above — the agent's own history is untouched"
+              style={{ border: 'none', cursor: 'pointer', padding: '6px 12px', borderRadius: 10, background: 'var(--cth-cream-200)', color: 'var(--cth-ink-900)', fontSize: 12 }}>Clear chat</button>
             <button type="button" onClick={() => setTerminal(true)}
               style={{ border: 'none', cursor: 'pointer', padding: '6px 12px', borderRadius: 10, background: 'var(--cth-cream-200)', color: 'var(--cth-ink-900)', fontSize: 12 }}>Terminal</button>
           </header>
+
+          <div style={{ padding: '10px 24px 0' }}>
+            <select aria-label="Chat" value="chat" onChange={() => undefined}
+              style={{ padding: '5px 8px', borderRadius: 10, border: 'none', background: 'var(--cth-cream-200)', color: 'var(--cth-ink-900)', fontSize: 13, fontWeight: 600, boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)', cursor: 'pointer', maxWidth: '100%' }}>
+              <option value="chat">{agent.name} chat</option>
+            </select>
+          </div>
 
           <div ref={scroller}
             onScroll={(e) => { const el = e.currentTarget; stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60; }}
             style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 24px' }}>
             <div style={{ maxWidth: 808, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {lines.length === 0 && (
-                <div style={{ textAlign: 'center', color: 'var(--cth-ink-500)', fontSize: 13, padding: '48px 0' }}>
-                  Nothing said yet. Write below to give {agent.name} something to do.
+              {visible.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '40px 0 8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}><Face agent={agent} size={96} card /></div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--cth-ink-900)' }}>Hi, I&apos;m {agent.name}.</div>
+                  <div style={{ fontSize: 16, color: 'var(--cth-ink-500)', marginTop: 4 }}>What would you like to work on?</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 16 }}>
+                    {(agent.character === 'mailman' ? MAILMAN_STARTERS : STARTERS).map((st) => (
+                      <button key={st} type="button" onClick={() => fillComposer(dock.current, st)}
+                        style={{ border: 'none', cursor: 'pointer', padding: '8px 12px', borderRadius: 12, background: 'var(--cth-paper-100)', color: 'var(--cth-ink-900)', fontSize: 13, boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)', textAlign: 'left' }}>
+                        {st}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
-              {lines.map((l) => <Bubble key={l.id} line={l} agent={agent} />)}
+              {visible.map((l) => <Bubble key={l.id} line={l} agent={agent} />)}
               {working && (
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                   <Face agent={agent} size={36} />
@@ -247,7 +340,7 @@ export function OfficeFocus({ config }: { config?: HarnessConfig | null }) {
           </div>
 
           <div ref={dock} style={{ padding: '0 24px 20px', maxWidth: 808 + 48, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
-            <MessageQueueComposer agent={agent} />
+            <MessageQueueComposer agent={agent} variant="chat" />
           </div>
         </main>
       </div>
@@ -271,6 +364,15 @@ export function OfficeFocus({ config }: { config?: HarnessConfig | null }) {
 }
 
 function Bubble({ line, agent }: { line: Line; agent: Agent }) {
+  if (line.role === 'note') {
+    return (
+      <div style={{ alignSelf: 'center', maxWidth: '86%', fontSize: 12, color: 'var(--cth-ink-500)', padding: '4px 10px', borderRadius: 10, background: 'var(--cth-cream-100)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-100)' }}
+        title={line.detail}>
+        <div style={{ fontWeight: 600 }}>{line.text}</div>
+        {line.detail && <div style={{ marginTop: 2, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: 84, overflow: 'hidden' }}>{line.detail.slice(0, 400)}</div>}
+      </div>
+    );
+  }
   const mine = line.role === 'user';
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexDirection: mine ? 'row-reverse' : 'row' }}>

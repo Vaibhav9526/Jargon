@@ -1,41 +1,37 @@
 <!-- RELEASE RUNNER, REQUIRED BEFORE YOU TAG: run RELEASE-CHECKLIST.md. Rehearse the updater on 0.4.7-rc.1 -> 0.4.8-rc.1 prereleases and pass the fault-injection checks BEFORE tagging the real release. This comment is not rendered in the published notes. -->
-# Jargon v0.4.8 — Classroom, Mail and Looks
+# Jargon v0.4.9 — Office chat, Mailman and a hive fix
 
-A Windows-only release from the private `Vaibhav9526/Jargon-backup` fork. It builds on v0.4.7 (School and Teaching).
+A Windows-only release from the private `Vaibhav9526/Jargon-backup` fork. It builds on v0.4.8 (Classroom, Mail and Looks).
 
 ## What's new
 
-- **Classroom chat for the staff room.** Click Teacher, Topper, Smart Guy, Librarian or Vice Principal to get a school ID card and a chat. Focus mode is a messenger layout with every character's chat in a left rail. Each character answers in its own voice, and the Topper and Smart Guy change facial expression with each reply (hand-drawn expression sets).
-- **Teacher quizzes (`@quiz`).** Tell the Teacher what you are stuck on and get 5 multiple-choice questions. After you answer: an exact score, an explanation for every question, your weak points with how to fix them, and recommended YouTube channels, books and other resources (each opens a YouTube or Google search, so links never go stale).
-- **Librarian's library and `@memory-notes`.** Add PDFs, slides (.pptx), Word files, EPUBs and text notes once; any character can then answer from them with `@memory-notes` and names the note it used. If nothing matches, it says so.
-- **`@teach-me` opens inside the chat.** The hosted OpenMAIC classroom is embedded in the Jargon window with a Jargon skin, the Jargon name and logo, your topic pre-filled and attached PDFs/images staged for you. You still press Enter Classroom yourself. A dropdown at the top of every chat keeps the running lesson one click away when you switch agents.
-- **Jargon Mail (Office floor).** A Mail button in the title bar: connect any IMAP/SMTP mailbox with an app password, then read, summarize, extract dates/amounts/links, rewrite and send. Nothing is sent without your confirmation.
-- **App looks.** Four new palettes (Paper, Ocean, Forest, Plum), each in light and dark, from a picker in the title bar. The original cream theme stays the default.
-- **Windows title bar merged into the app**, Command Center header and tabs simplified, `@` suggestions in the message box, redesigned staff room with new cast sprites.
+- **Office focus chat redesigned.** Every agent gets a messenger-style chat with a welcome screen, starter prompts, a chat dropdown, Clear chat / Terminal buttons and a rounded composer. Messages between agents (hand-offs, questions, replies) appear as notes in the chat, so delegation is visible.
+- **Talk to the team in plain words.** "tell Michael to…", "wake Jim", "hey Principal, …" route to that agent and wake it if asleep. "I need two more agents" brings in more of the floor's cast and tells the orchestrator. A sleeping agent that receives mail is woken automatically.
+- **Google sign-in for Mail.** Set up your own Google OAuth client once in Settings → Connections, then sign in with one click (PKCE, scope `https://mail.google.com/`). The same login serves the Mail panel and agents. The inbox has a Load more button (up to 1000).
+- **Mailman chat commands.** `@summarize` answers in the chat, `@inbox` opens the inbox, `@compose <address> <what to say>` writes a ready-to-send draft you can edit and must confirm. Date filters such as "unread mail sent today" work. Summaries render as formatted text.
+- **Floor-aware `@` suggestions.** School-only commands (`@teach-me`, `@quiz`, `@convert`, `@compress`) show only on the School floor; mail commands only on the Office floor.
+- **Fix: agent messages were being dropped on Windows.** Files written by PowerShell carry a byte-order mark that made the router reject them as malformed. The hive now reads them correctly.
 
 ## Known issues
 
-- Mail has been verified for sending (against a local test server) and for the AI actions, but reading a real inbox over IMAP has not been exercised yet. Gmail needs 2-Step Verification and an app password.
-- The Gmail "Sign in with Google" option in Settings needs your own Google Cloud OAuth client and has not been exercised end to end.
-- The new looks were checked numerically for contrast but not reviewed screen by screen.
-- Classroom replies use your Claude Code login (one short call per message). The OpenMAIC account, quota and any payment rules still apply on the hosted site.
+- Google sign-in needs your own Google Cloud "Desktop app" client and has not been exercised against a live Google account.
+- The Office chat shows an agent's own replies only for CLIs that keep a Claude-style transcript; other providers (for example Antigravity) show hand-off notes and their replies in the Terminal view.
+- 22 existing tests fail on this machine (symlink and config tests), with and without these changes.
+- The build is unsigned.
 
 ## Windows downloads
 
 | Build | Download |
 |---|---|
-| Installer | [Jargon-0.4.8-win-x64-setup.exe](https://github.com/Vaibhav9526/Jargon-backup/releases/download/v0.4.8/Jargon-0.4.8-win-x64-setup.exe) |
-| Portable | [Jargon-0.4.8-win-x64-portable.exe](https://github.com/Vaibhav9526/Jargon-backup/releases/download/v0.4.8/Jargon-0.4.8-win-x64-portable.exe) |
+| Installer | [Jargon-0.4.9-win-x64-setup.exe](https://github.com/Vaibhav9526/Jargon-backup/releases/download/v0.4.9/Jargon-0.4.9-win-x64-setup.exe) |
+| Portable | [Jargon-0.4.9-win-x64-portable.exe](https://github.com/Vaibhav9526/Jargon-backup/releases/download/v0.4.9/Jargon-0.4.9-win-x64-portable.exe) |
 
 Windows 10/11 x64. Verify the downloaded executable against the release's `SHA256SUMS.txt` before running it. The build is unsigned.
 
 ## Release verification and exception
 
-- Verification gates: typechecks (node and web), the focused School/Office, teaching, mail, classroom and library test suites, and the production build.
-- The repository owner requested this Windows-only release on 2026-10-09. No macOS signing, notarization, stapling, or real updater rehearsal is claimed. The release checklist and security settings remain unchanged.
-- The original `jargon-app/jargon` auto-update configuration is retained at the owner's request. Official updates may replace this fork's custom features.
+- Verification gates: typechecks (node and web) and the focused tests for mail, agent addressing and text decoding. No macOS signing, notarization or real updater rehearsal is claimed; the release checklist is unchanged.
+- The original `jargon-app/jargon` auto-update configuration is retained at the owner's request.
 - No API access codes, account credentials, mailbox passwords or user runtime data are included in the release.
 
-[Source for v0.4.8](https://github.com/Vaibhav9526/Jargon-backup/archive/refs/tags/v0.4.8.zip)
-
-MIT-licensed. The school artwork is original pixel art; the existing Office asset licensing remains unchanged.
+[Source for v0.4.9](https://github.com/Vaibhav9526/Jargon-backup/archive/refs/tags/v0.4.9.zip)

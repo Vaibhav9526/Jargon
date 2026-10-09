@@ -907,8 +907,9 @@ const api = {
     ipcRenderer.invoke('window:setTitleBarOverlay', color, symbolColor),
   popupAppMenu: (x: number, y: number): Promise<{ ok: boolean }> => ipcRenderer.invoke('window:popupMenu', x, y),
   // ─── Jargon Mail (Office floor) — credentials stay in main ───────────────
-  mailStatus: (): Promise<{ configured: boolean; user?: string; imapHost?: string; provider?: string; office: boolean }> =>
+  mailStatus: (): Promise<{ configured: boolean; user?: string; imapHost?: string; provider?: string; office: boolean; googleClient?: boolean }> =>
     ipcRenderer.invoke('mail:status'),
+  mailGoogleSignIn: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('mail:googleSignIn'),
   mailPreset: (email: string): Promise<import('../shared/mailAsk').MailProviderInfo | null> =>
     ipcRenderer.invoke('mail:preset', email),
   /** Opens the provider's fixed https app-password page (main picks the URL). */
