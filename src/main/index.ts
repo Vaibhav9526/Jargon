@@ -8,7 +8,7 @@ import {
 import { readTextFile } from './textFile';
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { join, resolve, sep, basename, dirname, isAbsolute } from 'node:path';
-import { homedir } from 'node:os';
+import { homedir, networkInterfaces } from 'node:os';
 import { request as httpsRequest } from 'node:https';
 import { PtyManager, type SpawnOptions } from './pty';
 import { resolveCommand as resolveCliCommand, isSafeCommandName } from './shellEnv';
@@ -42,6 +42,11 @@ import {
   type WebhookDispatch, type WebhookEndpointRef, type WebhookInbound, type WebhookTaskStatus
 } from './webhook';
 import {
+  SpectatorServer,
+  SPECTATOR_DEFAULT_PORT,
+  type SpectatorSnapshot
+} from './spectator';
+import {
   classifyInboundKind, isAutoAllowed,
   DEFAULT_CONTEXT_TRIGGER, DEFAULT_ORG_TRIGGER, DEFAULT_TRIGGER_MODE, DEFAULT_WEBHOOK_SCHEMA,
   type ContextRule, type ContextTriggerConfig, type InboundKind, type OrgTriggerConfig,
@@ -52,6 +57,7 @@ import {
 } from './triggerHistory';
 import { transcribeWithGroq, DEFAULT_GROQ_MODEL } from './freeflow';
 import { registerRealtimeIpc } from './realtime';
+import { registerTapriIpc, tapriMicLive } from './tapri';
 import { registerRealtimeActionIpc } from './realtimeActions';
 import { initCompletionWatcher } from './realtimeCompletionWatcher';
 import type { TaskCard, InboxMessage } from './realtimeCompletionWatcher';
@@ -2168,6 +2174,67 @@ function stopWebhookServer(): void {
   // not a transport one) — it is torn down with the process/hive, not here.
 }
 
+// ─── Spectator mode (read-only LAN live view of the office floor) ─────────────
+/** The running spectator server, or null when off. Deliberately NOT auto-started on
+ *  boot: the LAN surface only exists while the user has explicitly turned it on. */
+let spectatorServer: SpectatorServer | null = null;
+/** Last LAN URL handed out — retained so the toggle can re-show it without a restart. */
+let lastSpectatorUrl: string | undefined;
+
+/** The machine's LAN-reachable IPv4 address, or null when none is found. Prefers a
+ *  classic 192.168/10./172. private range over link-local, so the QR code points at
+ *  an address a phone on the same wifi can actually reach. */
+function lanIPv4(): string | null {
+  const nets = networkInterfaces();
+  const candidates: { addr: string; score: number }[] = [];
+  for (const name of Object.keys(nets)) {
+    for (const ni of nets[name] ?? []) {
+      if (ni.family !== 'IPv4' || ni.internal) continue;
+      const a = ni.address;
+      // Score: prefer common home/office LAN ranges; deprioritise link-local/APIPA.
+      let score = 1;
+      if (/^192\.168\./.test(a)) score = 3;
+      else if (/^10\./.test(a)) score = 3;
+      else if (/^172\.(1[6-9]|2\d|3[01])\./.test(a)) score = 2;
+      else if (/^169\.254\./.test(a)) score = 0;
+      candidates.push({ addr: a, score });
+    }
+  }
+  if (candidates.length === 0) return null;
+  candidates.sort((x, y) => y.score - x.score);
+  return candidates[0].addr;
+}
+
+/** Start the spectator server and return the LAN URL (token in the path) for the UI
+ *  to show + encode. If it's already up we keep it (a restart would mint a new token
+ *  and invalidate the QR everyone already scanned). */
+async function startSpectatorServer(): Promise<{ ok: boolean; url?: string; port?: number; error?: string }> {
+  const cfg = readConfig();
+  const preferred = typeof (cfg as { spectatorPort?: number }).spectatorPort === 'number'
+    ? (cfg as { spectatorPort?: number }).spectatorPort as number
+    : SPECTATOR_DEFAULT_PORT;
+  if (spectatorServer) {
+    const port = spectatorServer.port() ?? undefined;
+    return { ok: true, url: lastSpectatorUrl, port };
+  }
+  const server = new SpectatorServer({ port: preferred });
+  const res = await server.start();
+  if (!res.ok || res.port == null) { return { ok: false, error: res.error ?? 'failed to bind' }; }
+  spectatorServer = server;
+  const host = lanIPv4();
+  const url = `http://${host ?? 'localhost'}:${res.port}/${server.token_()}`;
+  lastSpectatorUrl = url;
+  console.log(`[spectator] listening on ${url}`);
+  return { ok: true, url, port: res.port };
+}
+
+/** Stop and forget the spectator server. Best-effort; safe when not running. */
+function stopSpectatorServer(): void {
+  try { spectatorServer?.stop(); } catch (e) { console.error('[spectator] stop failed:', e); }
+  spectatorServer = null;
+}
+
+
 /** The persisted main-window geometry (kv key `window.bounds`). */
 interface WindowBounds { x?: number; y?: number; width: number; height: number }
 
@@ -2387,7 +2454,7 @@ function createWindow(opts: { floor?: boolean } = {}): BrowserWindow {
   // xterm/editor copy must keep working).
   const micFeatureLive = (): boolean => {
     const cfg = readConfig();
-    return cfg.freeflowEnabled === true || cfg.realtimeVoiceEnabled === true;
+    return cfg.freeflowEnabled === true || cfg.realtimeVoiceEnabled === true || tapriMicLive();
   };
   const ses = win.webContents.session;
   ses.setPermissionRequestHandler((_wc, permission, callback, details) => {
@@ -3923,6 +3990,7 @@ function teardownAndQuit(): void {
   try { telemetry.stop(); } catch (e) { console.error('[quit] telemetry.stop:', e); }
   try { stopSlackServer(); } catch (e) { console.error('[quit] slack.stop:', e); }
   try { stopWebhookServer(); } catch (e) { console.error('[quit] webhook.stop:', e); }
+  try { stopSpectatorServer(); } catch (e) { console.error('[quit] spectator.stop:', e); }
   try { memory.stop(); } catch (e) { console.error('[quit] memory.stop:', e); }
   try { reflector.stop(); } catch (e) { console.error('[quit] reflector.stop:', e); }
   try { persist.close(); } catch (e) { console.error('[quit] persist.close:', e); }
@@ -4296,6 +4364,21 @@ ipcMain.handle('slack:setConfig', (_evt, patch: unknown) => {
   return { ok: true };
 });
 
+// ─── IPC: Spectator mode (read-only LAN live view of the floor) ───────────────
+ipcMain.handle('spectator:start', () => startSpectatorServer());
+ipcMain.handle('spectator:stop', () => { stopSpectatorServer(); return { ok: true }; });
+ipcMain.handle('spectator:status', () => ({
+  running: spectatorServer != null,
+  url: lastSpectatorUrl,
+  port: spectatorServer?.port() ?? undefined
+}));
+/** The renderer pushes a fresh floor snapshot ~1/s; main only caches it (bounded by
+ *  the server's own sanitiser) for the page to poll. Fire-and-forget: a push that
+ *  arrives with no server running is simply dropped — nothing to cache it into. */
+ipcMain.on('spectator:push', (_evt, snapshot: unknown) => {
+  if (spectatorServer) spectatorServer.setSnapshot(snapshot as SpectatorSnapshot);
+});
+
 // ─── IPC: Triggers — context (auto-compact / auto-clear) ────────────────────
 ipcMain.handle('triggers:getContext', () => readConfig().contextTrigger ?? DEFAULT_CONTEXT_TRIGGER);
 ipcMain.handle('triggers:setContext', (_evt, arg: unknown) => {
@@ -4568,6 +4651,9 @@ ipcMain.handle('freeflow:transcribe', async (_evt, arg: unknown) => {
 // short-lived EPHEMERAL client secret; the real key never crosses IPC. All wiring
 // lives in ./realtime so this stays a single registration line.
 registerRealtimeIpc();
+
+// ─── IPC: Tapri level (chai-stall discussion: CLI chatter + ElevenLabs voices) ──
+registerTapriIpc();
 
 // ─── IPC: Realtime Michael voice ACTIONS (rt-5, Phase 2) ─────────────────────
 // Thin adapters over the SAME main fns the god PTY already uses. ALL of the safety

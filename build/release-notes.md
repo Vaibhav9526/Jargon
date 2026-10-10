@@ -1,5 +1,4 @@
-- **Office chat.** Talk to your real agents.
-- **Wake, sleep, delete** from a picker.
-- **Modern tileset** for both floors.
-- **Mailman.** Easy sign-in, ask in plain words.
-- **@convert / @compress** in the Librarian chat.
+- **Tapri.** A chai-stall level: no agents, just you and the regulars.
+- **Talk by voice.** Hold Alt+S; replies in Hindi, with ElevenLabs voices.
+- **Auto-update.** Jargon now tells you when a new version is ready.
+- **Spectator mode** and **ambient floor sound.**

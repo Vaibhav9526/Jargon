@@ -330,6 +330,13 @@ export interface HarnessConfig {
   /** Which art the Office / School floor is drawn with: the original 'classic'
    *  LimeZu set or the 'modern' Emakina set. Cosmetic only — same layout rules. */
   tilesetStyle?: 'classic' | 'modern';
+  /** Ambient office sound (procedural, no audio assets). Default ON, so an
+   *  absent value must read as ON — the mirror image of `strongKeepalive`. */
+  soundEnabled?: boolean;
+  /** Master level for the ambient sound, 0..1. Default 0.5: present but quiet. */
+  soundVolume?: number;
+  /** Preferred LAN port for spectator mode. Unset = pick a free one (default 47870). */
+  spectatorPort?: number;
   /** Per-CLI-provider local/self-hosted base URL (Ollama/LM Studio/vLLM, …) for the
    *  OpenCode/Crush/pi/qwen engines; applied at spawn. API KEYS are NOT stored here —
    *  they live write-only in the secret broker. */
@@ -1314,6 +1321,21 @@ const api = {
   }): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke('webhook:setConfig', patch),
 
+  // ─── Spectator mode (read-only LAN live view of the floor) ──────────────────
+  /** Start the read-only spectator server. Returns the LAN URL (token in the path)
+   *  to show + encode as a QR code, or an error. */
+  spectatorStart: (): Promise<{ ok: boolean; url?: string; port?: number; error?: string }> =>
+    ipcRenderer.invoke('spectator:start'),
+  /** Stop the spectator server (kills the LAN surface). */
+  spectatorStop: (): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke('spectator:stop'),
+  /** Current spectator state + last URL (so the toggle can hydrate its badge/QR). */
+  spectatorStatus: (): Promise<{ running: boolean; url?: string; port?: number }> =>
+    ipcRenderer.invoke('spectator:status'),
+  /** Push a fresh floor snapshot to main (main just caches it for the page to poll).
+   *  Fire-and-forget — a dropped push only means the page shows a stale frame. */
+  spectatorPush: (snapshot: unknown): void => ipcRenderer.send('spectator:push', snapshot),
+
   // ─── Triggers: context (auto-compact / auto-clear) ──────────────────────────
   /** The two context rules (cadence + pressure gate + message), deep-filled. */
   getContextTrigger: (): Promise<ContextTriggerConfig> =>
@@ -1419,6 +1441,31 @@ const api = {
     ipcRenderer.invoke('providerKey:has', backend),
   providerKeyClear: (backend: string): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke('providerKey:clear', backend),
+  // Tapri level — CLI-backed chai-stall chatter + ElevenLabs voice. The ElevenLabs key is
+  // write-only here: `tapriKeyHas` is a presence boolean, nothing ever returns the key.
+  tapriTalk: (req: import('../shared/tapri').TapriTalkRequest): Promise<import('../shared/tapri').TapriTalkResult> =>
+    ipcRenderer.invoke('tapri:talk', req),
+  tapriSummarize: (req: import('../shared/tapri').TapriSummaryRequest): Promise<import('../shared/tapri').TapriSummaryResult> =>
+    ipcRenderer.invoke('tapri:summarize', req),
+  /** Streamed lines of a Tapri round (one per completed line), keyed by the request id. */
+  onTapriTurn: (fn: (msg: { id: string; turn: import('../shared/tapri').TapriTurn }) => void): (() => void) => {
+    const h = (_e: unknown, msg: { id: string; turn: import('../shared/tapri').TapriTurn }) => fn(msg);
+    ipcRenderer.on('tapri:turn', h);
+    return () => { ipcRenderer.removeListener('tapri:turn', h); };
+  },
+  tapriClis: (): Promise<import('../shared/tapri').TapriCliStatus[]> =>
+    ipcRenderer.invoke('tapri:clis'),
+  tapriSpeak: (req: { speaker: string; text: string; language?: string }): Promise<import('../shared/tapri').TapriSpeakResult> =>
+    ipcRenderer.invoke('tapri:speak', req),
+  tapriAmbience: (): Promise<import('../shared/tapri').TapriSpeakResult> =>
+    ipcRenderer.invoke('tapri:ambience'),
+  tapriTranscribe: (req: { audioBase64: string; mime: string; language?: string }): Promise<{ ok: true; text: string } | { ok: false; error: string; code?: string }> =>
+    ipcRenderer.invoke('tapri:transcribe', req),
+  /** Tell main the Tapri level is on screen, so the mic prompt may be granted (push-to-talk). */
+  tapriMic: (live: boolean): Promise<boolean> => ipcRenderer.invoke('tapri:mic', live),
+  tapriKeyHas: (): Promise<boolean> => ipcRenderer.invoke('tapri:keyHas'),
+  tapriKeySet: (key: string): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('tapri:keySet', key),
+  tapriKeyClear: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('tapri:keyClear'),
   // Realtime Michael (voice orchestrator) — MAIN mints a short-lived EPHEMERAL token
   // from the BYOK OpenAI key; the real key NEVER crosses IPC. `realtimeHasOpenAiKey`
   // is a presence boolean only (gates the voice toggle, like providerKeyHas).

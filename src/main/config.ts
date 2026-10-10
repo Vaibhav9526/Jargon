@@ -321,6 +321,11 @@ export interface HarnessConfig {
   /** Which art the Office / School floor is drawn with: the original 'classic'
    *  LimeZu set or the 'modern' Emakina set. Cosmetic only — same layout rules. */
   tilesetStyle?: 'classic' | 'modern';
+  /** Ambient office sound (procedural, no audio assets). Default ON, so an
+   *  absent value must read as ON — the mirror image of `strongKeepalive`. */
+  soundEnabled?: boolean;
+  /** Master level for the ambient sound, 0..1. Default 0.5: present but quiet. */
+  soundVolume?: number;
   /** Per-CLI-provider local/self-hosted base URL (Ollama/LM Studio/vLLM, …) for the
    *  OpenCode/Crush/pi/qwen engines; applied at spawn (config-injection or proxy
    *  upstream). API KEYS are NOT stored here — they live write-only in the secret
@@ -454,6 +459,10 @@ const DEFAULTS: HarnessConfig = {
   tvShowOffices: false,
   officeTheme: 'office',
   tilesetStyle: 'modern',
+  // Ambient floor sound. ON by default (an absent value reads as on) and quiet;
+  // both are overwritten the moment the user touches the top-bar toggle.
+  soundEnabled: true,
+  soundVolume: 0.5,
   slackEnabled: false,
   slackSigningSecret: undefined,
   slackBotToken: undefined,

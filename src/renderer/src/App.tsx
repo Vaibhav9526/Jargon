@@ -29,7 +29,11 @@ import { isSchoolCast } from '@/components/classroom/art';
 import { SettingsModal, type Section as SettingsSection } from '@/components/SettingsModal';
 import { OfficeThemeSwitchProvider } from '@/components/OfficeThemePicker';
 import { SchoolOfficeSwitcher } from '@/components/SchoolOfficeSwitcher';
+import { TapriLevel, useTapriLevel } from '@/tapri/TapriLevel';
 import { TilesetSwitcher } from '@/components/TilesetSwitcher';
+import { SoundToggle } from '@/components/SoundToggle';
+import { clampVolume } from '@/audio/soundEngine';
+import { SpectatorToggle } from '@/components/SpectatorToggle';
 import { IconMail } from '@/components/classroom/icons';
 import { PixelPanel } from '@/components/PixelPanel';
 import { PixelButton } from '@/components/PixelButton';
@@ -102,6 +106,7 @@ export function App() {
   const [mailRequest, setMailRequest] = useState('');
   const [mailDraft, setMailDraft] = useState<import('@shared/mailAsk').MailDraft | null>(null);
   const officeThemeNow = useStore((s) => s.officeTheme);
+  const tapriOpen = useTapriLevel((s) => s.open);
   const onOfficeFloor = officeThemeNow === 'office';
   const onStaffroom = officeThemeNow === 'staffroom';
   useEffect(() => {
@@ -153,6 +158,11 @@ export function App() {
       // tvShowOffices flag; off = always the office). Settings keeps this synced.
       useStore.getState().setOfficeTheme(c.tvShowOffices ? (c.officeTheme ?? 'office') : 'office');
       useStore.getState().setTilesetStyle(c.tilesetStyle === 'classic' ? 'classic' : 'modern');
+      // Mirror the ambient floor sound. Absent means ON at the install default,
+      // so the top-bar mute starts from the saved setting rather than from
+      // silence on a config that predates the toggle.
+      useStore.getState().setSoundEnabled(c.soundEnabled !== false);
+      useStore.getState().setSoundVolume(clampVolume(c.soundVolume));
       // Mirror the triggers so Settings → Connections and the Command Center's
       // Triggers tab read one list, not two copies that drift — whichever surface
       // saves calls these same setters and the other repaints. No extra IPC: main
@@ -313,7 +323,7 @@ export function App() {
   return (
     <OfficeThemeSwitchProvider config={config} onConfigChange={setConfig}>
     <div style={{
-      display: 'flex', flexDirection: 'column',
+      display: 'flex', flexDirection: 'column', position: 'relative',
       width: '100vw', height: '100vh',
       overflow: 'hidden'
     }}>
@@ -328,8 +338,13 @@ export function App() {
         className="cth-titlebar-drag"
         style={{
           height: 36, minHeight: 36,
-          background: 'linear-gradient(180deg, var(--cth-cream-100) 0%, var(--cth-cream-200) 100%)',
-          borderBottom: '1px solid var(--cth-ink-300)',
+          // On the Tapri level the bar floats over the scene as frosted glass.
+          ...(tapriOpen
+            ? { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60,
+                background: 'rgba(250, 242, 222, 0.22)', backdropFilter: 'blur(14px) saturate(1.2)',
+                WebkitBackdropFilter: 'blur(14px) saturate(1.2)', borderBottom: '1px solid rgba(255,255,255,0.25)' }
+            : { background: 'linear-gradient(180deg, var(--cth-cream-100) 0%, var(--cth-cream-200) 100%)',
+                borderBottom: '1px solid var(--cth-ink-300)' }),
           display: 'flex',
           alignItems: 'center',
           // macOS reserves room for the traffic lights; Windows reserves room for
@@ -364,7 +379,9 @@ export function App() {
           alt="Jargon"
           style={{ height: 20, width: 'auto', display: 'block' }}
         />
-        <TilesetSwitcher />
+        {!tapriOpen && <TilesetSwitcher />}
+        <SoundToggle />
+        <SpectatorToggle />
         {/* v0.3.7: the version is no longer inert text — it doubles as the
             update control (check / download / restart to update). */}
         <UpdateBadge />
@@ -489,9 +506,15 @@ export function App() {
 
       </div>
 
+      {tapriOpen && (
+        <div style={{ position: 'absolute', inset: 0 }}>
+          <TapriLevel />
+        </div>
+      )}
       <div style={{
         flex: 1, minHeight: 0,
-        display: 'flex',
+        // Tapri replaces the floor visually; the floor (agents, PTYs) keeps running untouched.
+        display: tapriOpen ? 'none' : 'flex',
         padding: 16,
         gap: 0
       }}>
@@ -576,7 +599,7 @@ export function App() {
         </div>
       </div>
 
-      <AgentStrip config={config} />
+      {!tapriOpen && <AgentStrip config={config} />}
 
       {addAgentOpen && (
         <AddAgentModal

@@ -263,7 +263,7 @@ test('titlebar control is immediately left of logo, native accessible/no-drag, w
   assert.match(app, /<SchoolOfficeSwitcher \/>\s*<img\s+src=\{brandLogo\}/);
   assert.match(app, /<OfficeThemeSwitchProvider config=\{config\} onConfigChange=\{setConfig\}>/);
   assert.match(app, /onConfigChanged\(setConfig\)/);
-  assert.match(switcher, /<select[\s\S]*?className="cth-titlebar-nodrag"[\s\S]*?aria-label="School \/ Office"/);
+  assert.match(switcher, /<select[\s\S]*?className="cth-titlebar-nodrag"[\s\S]*?aria-label="School \/ Office( \/ Tapri)?"/);
   assert.match(switcher, /value=\{theme\}/);
   assert.match(switcher, /useOfficeThemeSwitch\(\)/);
   assert.match(switcher, /request\(\{ officeTheme: 'staffroom', tvShowOffices: true \}\)/);

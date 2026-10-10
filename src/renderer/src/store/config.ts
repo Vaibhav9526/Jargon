@@ -128,6 +128,13 @@ export interface HarnessConfig {
   /** Which art the Office / School floor is drawn with: the original 'classic'
    *  LimeZu set or the 'modern' Emakina set. Cosmetic only — same layout rules. */
   tilesetStyle?: 'classic' | 'modern';
+  /** Ambient office sound (procedural, no audio assets). Default ON, so an
+   *  absent value must read as ON — the mirror image of `strongKeepalive`. */
+  soundEnabled?: boolean;
+  /** Master level for the ambient sound, 0..1. Default 0.5: present but quiet. */
+  soundVolume?: number;
+  /** Preferred LAN port for spectator mode. Unset = pick a free one (default 47870). */
+  spectatorPort?: number;
   /** Per-CLI-provider local/self-hosted base URL (Ollama/LM Studio/vLLM, …) for the
    *  OpenCode/Crush/pi/qwen engines; applied at spawn. API KEYS are NOT stored here —
    *  they live write-only in the secret broker. */

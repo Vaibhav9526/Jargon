@@ -1,21 +1,27 @@
 import { useStore } from '@/store/store';
 import { useOfficeThemeSwitch } from './OfficeThemePicker';
+import { useTapriLevel } from '@/tapri/TapriLevel';
 
 /** Native select keeps platform keyboard navigation in Electron's drag region. */
 export function SchoolOfficeSwitcher() {
   const theme = useStore((s) => s.officeTheme);
   const { busy, pending, note, request } = useOfficeThemeSwitch();
+  const tapriOpen = useTapriLevel((s) => s.open);
+  const setTapri = useTapriLevel((s) => s.setOpen);
   const otherTheme = theme !== 'office' && theme !== 'staffroom';
 
   return (
     <div className="cth-titlebar-nodrag" style={{ position: 'relative', flexShrink: 0 }}>
       <select
         className="cth-titlebar-nodrag"
-        aria-label="School / Office"
+        aria-label="School / Office / Tapri"
         title="Switch setting — start a fresh team (keeps the orchestrator and assistant)"
-        value={theme}
+        value={tapriOpen ? 'tapri' : theme}
         disabled={busy || pending}
         onChange={(event) => {
+          // Tapri is a no-agent discussion level: it overlays the floor and leaves the team running.
+          if (event.target.value === 'tapri') { setTapri(true); return; }
+          setTapri(false);
           if (event.target.value === 'staffroom') {
             request({ officeTheme: 'staffroom', tvShowOffices: true });
           } else if (event.target.value === 'office') {
@@ -33,8 +39,9 @@ export function SchoolOfficeSwitcher() {
       >
         <option value="staffroom">School</option>
         <option value="office">Office</option>
+        <option value="tapri">Tapri</option>
         {/* Settings still supports other themes; never mislabel their floor. */}
-        {otherTheme && <option value={theme} disabled>Other theme</option>}
+        {otherTheme && !tapriOpen && <option value={theme} disabled>Other theme</option>}
       </select>
       {note && (
         <div role="status" style={{

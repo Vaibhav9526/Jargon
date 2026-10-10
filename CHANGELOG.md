@@ -6,6 +6,25 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-10
+
+### Added
+
+- **Tapri level**: a no-agent chai-stall discussion scene with a cast of regulars, walking/auto arrivals, street traffic and animals, pixel-face reactions and storm-offs. The talk is written by a CLI you pick (Claude Code, Codex, Gemini CLI, Qwen Code, OpenCode) and streams line by line.
+- **Push-to-talk (Alt+S)** with ElevenLabs transcription; replies are in Hindi and address the user by name.
+- **Summarize button** and full-talk transcript; optional ElevenLabs voices and street ambience (bring your own key).
+- **Auto-update** from GitHub releases is switched on (`Vaibhav9526/Jargon`).
+- **Spectator mode** (read-only LAN live view with QR) and **ambient floor sound** (procedural, no audio assets).
+
+### Changed
+
+- The top-bar switch is now School / Office / Tapri. Tapri overlays the floor and leaves agents running.
+- Release notes and the update toast now point at the public `Vaibhav9526/Jargon` repository.
+
+### Known issues
+
+- Builds before 0.5.0 cannot auto-update (updater was off and pointed at a nonexistent repo); install 0.5.0 manually once.
+
 ## [0.4.9] - 2026-10-09
 
 ### Added

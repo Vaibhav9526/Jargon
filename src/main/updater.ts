@@ -44,11 +44,10 @@ import { reduceStatus, clampPercent, isNewer, installerUrl, shouldShowReleaseDro
  *      downgrade is per-check, not a permanent latch.
  */
 
-const REPO = 'jargon-app/jargon';
-/** Kill switch. The release repo is private (and `REPO` above does not exist), so
- *  every check would 404 and the UI would read "update check failed". Flip to
- *  true once releases live in a PUBLIC repo that REPO / electron-builder.yml name. */
-const UPDATES_ENABLED = false;
+const REPO = 'Vaibhav9526/Jargon';
+/** Kill switch. Releases live in the PUBLIC repo that REPO / electron-builder.yml name, so checks
+ *  work unauthenticated. Flip to false only if that repo goes private or is renamed. */
+const UPDATES_ENABLED = true;
 const UPDATES_OFF = 'updates are turned off in this build';
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6h
 const FALLBACK_CACHE_MS = 60 * 60 * 1000;     // 1h between releases/latest polls

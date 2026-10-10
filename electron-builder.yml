@@ -8,8 +8,8 @@ copyright: Copyright © 2026 Jargon Contributors
 # knows which repo to poll.
 publish:
   provider: github
-  owner: jargon-app
-  repo: jargon
+  owner: Vaibhav9526
+  repo: Jargon
 
 # Bake the update toast's "What's new" list straight into latest*.yml.
 #

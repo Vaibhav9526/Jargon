@@ -24,6 +24,8 @@ import { acquireTerminal, resetTerminal, isTerminalAutomationSafe } from '@/comp
 import { canDeliverToAgent, deliverWithAcknowledgement, checkPrecondition } from './queueDelivery';
 import { OFFICE_CAST, CAST_BY_NAME, castForTheme, defaultCharacterForTheme, type OfficeCharacterName } from '@/scene/office/cast';
 import { quickHire } from '@/components/classroom/quickHire';
+import { createSoundBridge } from '@/audio/soundBridge';
+import { initSound, playSound, setSoundEnabled, setSoundVolume } from '@/audio/soundEngine';
 
 const GOD_ID = 'god';
 /** Accent palette for MAIN-spawned (voice-hired) agents — picked deterministically
@@ -392,6 +394,23 @@ export function useHive(config: HarnessConfig | null): void {
   // 'stopped' the avatar is pinned to 'looping' and hook events must NOT flip it
   // back to 'working' (the flicker the spec calls out); only a genuine Stop clears it.
   const breakerLevel = useRef<Record<string, string>>({});
+
+  // S) Ambient floor sound. ONE subscription decides every cue and owns the
+  // engine's master gain, so the top-bar mute lands on the next store write and
+  // no component anywhere else has to know the engine exists.
+  useEffect(() => {
+    const disposeGesture = initSound();
+    const unsubscribe = createSoundBridge({
+      subscribe: useStore.subscribe,
+      getState: useStore.getState,
+      play: playSound,
+      configure: ({ enabled, volume }) => {
+        setSoundEnabled(enabled);
+        setSoundVolume(volume);
+      }
+    });
+    return () => { unsubscribe(); disposeGesture(); };
+  }, []);
 
   // 0) Heal roster `description` from hive `role` when the floor caption was
   //    overwritten by a status string ("on standby") after hire.

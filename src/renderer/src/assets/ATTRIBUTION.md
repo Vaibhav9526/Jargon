@@ -60,3 +60,10 @@ from the 32px tilesets in [`EmakinaFR/office-map`](https://github.com/EmakinaFR/
 - The atlas contains only the tiles the two maps use, each extruded by 1px so the 32px art can be
   scaled onto the engine's 16-unit grid without seams. Re-run the generator to rebuild:
   `python tools/build-emakina-world.py --src <clone of EmakinaFR/office-map>`.
+
+## Tapri backdrop
+
+`tapri/tapri-bg.png` is the maintainer-supplied concept image for the Tapri level, with the parked
+van retouched out. Characters, vehicles and animals in that level are drawn procedurally in
+`src/renderer/src/tapri/` and are covered by the MIT License. Confirm the backdrop's provenance
+before redistributing.

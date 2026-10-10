@@ -18,6 +18,7 @@ import { preferredAgentRole } from '@shared/agentRole';
 import { isInboxNudge } from '@shared/hiveNudge';
 import { refocusAfterRemoval, focusOnLoad, restoreFocus } from './focusMode';
 import { chooseRosterSource } from './rosterSource';
+import { DEFAULT_SOUND_VOLUME, clampVolume } from '@/audio/soundEngine';
 
 export type ToolKind =
   | 'Read' | 'Edit' | 'Write' | 'Bash' | 'WebFetch' | 'WebSearch'
@@ -282,6 +283,13 @@ interface State {
   /** Art set the floor is drawn with (mirror of config.tilesetStyle). */
   tilesetStyle: TilesetStyle;
   setTilesetStyle: (style: TilesetStyle) => void;
+  /** Ambient floor sound (mirror of config.soundEnabled / soundVolume). Read by
+   *  the one subscriber in audio/soundBridge, which also owns the engine's master
+   *  gain — so a mute here is heard on the next store write, not at the next cue. */
+  soundEnabled: boolean;
+  soundVolume: number;
+  setSoundEnabled: (on: boolean) => void;
+  setSoundVolume: (level: number) => void;
   setOfficeTheme: (theme: ThemeId) => void;
   /** Mirror of config.webhookTriggers — the inbound HTTP endpoints. Webhooks are
    *  editable from BOTH Settings → Connections and the Triggers tab, so neither
@@ -887,6 +895,12 @@ export const useStore = create<State>((set, get) => ({
   setOfficeTheme: (theme) => set({ officeTheme: theme }),
   tilesetStyle: 'modern',
   setTilesetStyle: (style) => set({ tilesetStyle: style }),
+  // Default ON at half volume, matching main's DEFAULTS — the engine reads
+  // `!== false` so an absent setting stays audible either way.
+  soundEnabled: true,
+  soundVolume: DEFAULT_SOUND_VOLUME,
+  setSoundEnabled: (on) => set({ soundEnabled: on }),
+  setSoundVolume: (level) => set({ soundVolume: clampVolume(level) }),
   webhookTriggers: [],
   setWebhookTriggers: (list) => set({ webhookTriggers: list }),
   // A copy, not the shared DEFAULT_ORG_TRIGGER instance — main takes the same
