@@ -121,6 +121,21 @@
   can drive the road). Seat/stand/lane coordinates in `sim.ts` are in that frame.
 - Checks: `node --test test/tapri.test.cjs test/tapri-people.test.cjs test/tapri-vehicles.test.cjs`.
 
+## Releasing + auto-update (public repo `Vaibhav9526/Jargon`, remote `origin`)
+
+- Auto-update is ON (`UPDATES_ENABLED` in `main/updater.ts`, `REPO` there and in
+  `shared/updateState.ts`, `publish:` in `electron-builder.yml` — keep all three in sync).
+  electron-updater reads `latest.yml` + the setup exe + `.blockmap` from the newest GitHub release;
+  the portable exe only gets the notify-only fallback. Builds before 0.5.0 cannot update.
+- Release recipe: bump `package.json` (+ lock), `RELEASE.md`, `build/release-notes.md`,
+  `CHANGELOG.md`, `docs/llms.txt` → `npm run check:links` → commit on a branch based on
+  `origin/main` (the backup remote's history is unrelated; never push to `backup`) →
+  `npm run build && npx electron-builder --win --config.npmRebuild=false --publish never`
+  (`npmRebuild=false` because the clang/gyp problem above breaks a rebuild; node_modules is already
+  rebuilt for Electron) → tag `vX.Y.Z`, push, then `gh release create` uploading from `dist/`:
+  the setup exe, portable exe, `latest.yml`, `*.blockmap`, and a `SHA256SUMS.txt`.
+  `latest.yml` is what makes the in-app update work; a release without it is invisible to the updater.
+
 ## User preferences
 
 - When running opencode, use `npx opencode` — NOT bare `opencode`. The bun shim
